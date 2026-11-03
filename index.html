@@ -1,166 +1,210 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AdEarn</title>
-
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="//libtl.com/sdk.js" data-zone="12185380" data-sdk="show_12185380"></script>
-
-<style>
-:root{color-scheme:dark;--card:#151d33;--muted:#9aa8c7;--accent:#35d0a0;--line:#26324d}
-*{box-sizing:border-box}
-body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7ff;font-family:system-ui,sans-serif;padding:18px 15px 30px}
-.wrap{max-width:520px;margin:auto}
-.top{display:flex;align-items:center;justify-content:space-between;margin:8px 2px 22px}
-.brand{font-size:21px;font-weight:800}
-.brand span{color:var(--accent)}
-.profile{font-size:12px;color:var(--muted);background:#1b2741;padding:8px 12px;border-radius:20px}
-.hero{background:linear-gradient(120deg,#1d755f,#174b63);padding:20px;border-radius:22px}
-.eyebrow{font-size:12px;color:#d1fff0}
-.balance-label{font-size:13px;color:#d7f8ed;margin-top:12px}
-.balance{font-size:34px;font-weight:800;margin:3px 0 14px}
-.hero small{color:#d1fff0}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:17px 0}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px 14px;min-height:112px;color:inherit;text-align:left;font:inherit;cursor:pointer}
-.tile:disabled{opacity:.6;cursor:wait}
-.ico{font-size:25px}
-.tile b{display:block;margin-top:9px;font-size:15px}
-.tile small{color:var(--muted);font-size:11px}
-.section{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px;margin-top:12px}
-.section h3{margin:0 0 8px;font-size:15px}
-.section p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
-.bottom{margin:20px 4px 0;text-align:center;color:#7785a4;font-size:11px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdEarn</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://monetag.com/telegram/3561815/"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;background:#101827;color:#fff;font-family:Arial,sans-serif}
+    .app{max-width:480px;margin:auto}
+    .header{font-size:25px;font-weight:bold;color:#42e6a4;margin:12px 0 22px}
+    .card{background:#1d2a3d;border-radius:16px;padding:20px;margin-bottom:16px}
+    .muted{color:#aab8ca;font-size:14px}
+    .balance{font-size:34px;font-weight:bold;margin-top:8px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    button{border:0;border-radius:12px;padding:17px 8px;background:#263a52;color:white;font-size:16px;font-weight:bold;cursor:pointer}
+    button:active{transform:scale(.98)}
+    .primary{background:#16a875;color:#061b14;width:100%}
+    .section{display:none}
+    .section.active{display:block}
+    input,select{width:100%;padding:14px;margin:8px 0 14px;border:1px solid #40516a;border-radius:10px;background:#101827;color:white;font-size:16px}
+    .back{background:#34465c;margin-bottom:14px}
+    #message{margin-top:14px;color:#ffd477;font-size:14px;line-height:1.5}
+    .footer{text-align:center;color:#718096;font-size:12px;margin:25px 0}
+  </style>
 </head>
-
 <body>
-<div class="wrap">
+<div class="app">
+  <div class="header">🎬 AdEarn</div>
 
-<header class="top">
-<div class="brand">Ad<span>Earn</span> 🎬</div>
-<div class="profile" id="profile">👤 Guest</div>
-</header>
+  <div class="card">
+    <div class="muted">স্বাগতম, <span id="username">বন্ধু</span>!</div>
+    <div class="muted" style="margin-top:18px">তোমার মোট ব্যালেন্স</div>
+    <div class="balance" id="balance">৳0.00</div>
+    <div class="muted">BDT</div>
+  </div>
 
-<section class="hero">
-<div class="eyebrow">WELCOME TO ADEARN</div>
-<div class="balance-label">তোমার মোট ব্যালেন্স</div>
-<div class="balance">৳0.00</div>
-<small>BDT · Demo display</small>
-</section>
+  <div id="home" class="section active">
+    <div class="grid">
+      <button onclick="showSection('ads')">📺 Watch Ads</button>
+      <button onclick="showSection('balancePage')">💰 My Balance</button>
+      <button onclick="showSection('referral')">👥 Refer & Earn</button>
+      <button onclick="showSection('withdraw')">💳 Withdraw</button>
+      <button onclick="showSection('statistics')">📊 Statistics</button>
+      <button onclick="showSection('profile')">👤 My Profile</button>
+    </div>
+  </div>
 
-<div class="grid">
-<button class="tile" id="watchAds" data-action="ads">
-<span class="ico">📺</span>
-<b>Watch Ads</b>
-<small>বিজ্ঞাপন দেখে আয়</small>
-</button>
+  <div id="ads" class="section card">
+    <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
+    <h3>📺 বিজ্ঞাপন দেখো</h3>
+    <p class="muted">বিজ্ঞাপন দেখার দৈনিক সীমা সার্ভার থেকে যাচাই হবে।</p>
+    <button class="primary" onclick="watchAd()">বিজ্ঞাপন দেখুন</button>
+    <p id="adMessage"></p>
+  </div>
 
-<button class="tile" data-action="balance">
-<span class="ico">💰</span>
-<b>My Balance</b>
-<small>ব্যালেন্স দেখো</small>
-</button>
+  <div id="balancePage" class="section card">
+    <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
+    <h3>💰 My Balance</h3>
+    <div class="balance" id="balance2">৳0.00</div>
+    <p class="muted">সার্ভার থেকে পাওয়া ব্যালেন্স এখানে দেখাবে।</p>
+  </div>
 
-<button class="tile" data-action="refer">
-<span class="ico">👥</span>
-<b>Refer & Earn</b>
-<small>বন্ধুকে আমন্ত্রণ</small>
-</button>
+  <div id="referral" class="section card">
+    <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
+    <h3>👥 Refer & Earn</h3>
+    <p class="muted">তোমার রেফারেল লিংক এখানে দেখাবে।</p>
+    <input id="refLink" readonly placeholder="রেফারেল লিংক">
+    <button class="primary" onclick="copyReferral()">লিংক কপি</button>
+  </div>
 
-<button class="tile" data-action="withdraw">
-<span class="ico">💳</span>
-<b>Withdraw</b>
-<small>bKash / Nagad</small>
-</button>
+  <div id="withdraw" class="section card">
+    <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
+    <h3>💳 টাকা উত্তোলন</h3>
+    <label>পেমেন্ট মাধ্যম</label>
+    <select id="method">
+      <option value="bkash">বিকাশ</option>
+      <option value="nagad">নগদ</option>
+    </select>
+    <label>মোবাইল নম্বর</label>
+    <input id="phone" placeholder="01XXXXXXXXX" inputmode="numeric">
+    <label>টাকার পরিমাণ</label>
+    <input id="amount" type="number" placeholder="যেমন: 100" min="1">
+    <button class="primary" onclick="submitWithdraw()">উত্তোলনের আবেদন</button>
+    <p id="withdrawMessage"></p>
+  </div>
 
-<button class="tile" data-action="stats">
-<span class="ico">📊</span>
-<b>Statistics</b>
-<small>তোমার কাজের হিসাব</small>
-</button>
+  <div id="statistics" class="section card">
+    <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
+    <h3>📊 Statistics</h3>
+    <p>দেখা বিজ্ঞাপন: <b id="adsWatched">0</b></p>
+    <p>রেফারেল: <b id="referrals">0</b></p>
+  </div>
 
-<button class="tile" data-action="profile">
-<span class="ico">👤</span>
-<b>My Profile</b>
-<small>অ্যাকাউন্ট তথ্য</small>
-</button>
-</div>
+  <div id="profile" class="section card">
+    <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
+    <h3>👤 My Profile</h3>
+    <p id="profileName">Telegram account</p>
+    <p class="muted">AdEarn Member</p>
+  </div>
 
-<section class="section">
-<h3 id="message-title">📌 গুরুত্বপূর্ণ</h3>
-<p id="message">AdEarn-এ স্বাগতম! বিজ্ঞাপন দেখতে Watch Ads চাপ দাও।</p>
-</section>
-
-<p class="bottom">AdEarn · Secure rewards experience</p>
+  <div id="message"></div>
+  <div class="footer">AdEarn · Secure rewards experience</div>
 </div>
 
 <script>
-const tg=window.Telegram?.WebApp;
+const tg = window.Telegram?.WebApp;
+tg?.ready();
+tg?.expand();
 
-if(tg){
-  tg.ready();
-  tg.expand();
+const user = tg?.initDataUnsafe?.user;
+if (user) {
+  document.getElementById("username").textContent = user.first_name || "বন্ধু";
+  document.getElementById("profileName").textContent =
+    "Telegram account: " + (user.first_name || "User");
+}
 
-  const user=tg.initDataUnsafe?.user;
-  if(user){
-    document.getElementById('profile').textContent=
-      '👤 '+(user.first_name||'User');
+// API যুক্ত হলে সার্ভারের ঠিকানা এখানে বসবে।
+const API_BASE = "";
+
+function showSection(id) {
+  document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  if (id === "balancePage" || id === "statistics" || id === "profile") loadAccount();
+}
+
+async function api(path, body) {
+  if (!API_BASE) throw new Error("সার্ভার এখনো সংযুক্ত করা হয়নি।");
+  const response = await fetch(API_BASE + path, {
+    method: body ? "POST" : "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "tma " + (tg?.initData || "")
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "অনুরোধ সফল হয়নি");
+  return data;
+}
+
+async function loadAccount() {
+  try {
+    const data = await api("/api/me");
+    const balance = Number(data.balance || 0).toFixed(2);
+    document.getElementById("balance").textContent = "৳" + balance;
+    document.getElementById("balance2").textContent = "৳" + balance;
+    document.getElementById("adsWatched").textContent = data.ads_watched || 0;
+    document.getElementById("referrals").textContent = data.referrals || 0;
+    document.getElementById("refLink").value = data.referral_link || "";
+  } catch (e) {
+    document.getElementById("message").textContent = e.message;
   }
 }
 
-const title=document.getElementById('message-title');
-const message=document.getElementById('message');
-const watchButton=document.getElementById('watchAds');
-
-function showMessage(t,m){
-  title.textContent=t;
-  message.textContent=m;
+async function watchAd() {
+  const msg = document.getElementById("adMessage");
+  msg.textContent = "বিজ্ঞাপন চালু হচ্ছে...";
+  try {
+    if (typeof window.show_12185380 !== "function") {
+      throw new Error("বিজ্ঞাপন এখন পাওয়া যাচ্ছে না।");
+    }
+    await window.show_12185380();
+    msg.textContent = "বিজ্ঞাপন শেষ হয়েছে। পুরস্কার সার্ভার যাচাইয়ের পর যোগ হবে।";
+  } catch (e) {
+    msg.textContent = e.message || "বিজ্ঞাপন চালু করা যায়নি।";
+  }
 }
 
-watchButton.addEventListener('click',async()=>{
-  if(typeof window.show_12185380!=='function'){
-    showMessage('⚠️ বিজ্ঞাপন চালু হয়নি',
-      'Monetag SDK লোড হয়নি। ইন্টারনেট সংযোগ ও SDK সেটআপ পরীক্ষা করো।');
+async function submitWithdraw() {
+  const msg = document.getElementById("withdrawMessage");
+  const method = document.getElementById("method").value;
+  const phone = document.getElementById("phone").value.trim();
+  const amount = Number(document.getElementById("amount").value);
+
+  if (!/^01[3-9]\d{8}$/.test(phone)) {
+    msg.textContent = "সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দাও।";
+    return;
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    msg.textContent = "সঠিক টাকার পরিমাণ লিখো।";
     return;
   }
 
-  watchButton.disabled=true;
-  watchButton.querySelector('b').textContent='Loading Ad...';
-
-  try{
-    await window.show_12185380();
-
-    showMessage('✅ বিজ্ঞাপন শেষ',
-      'বিজ্ঞাপন দেখার প্রক্রিয়া শেষ হয়েছে। Reward যোগ করার জন্য সার্ভার যাচাই এখনো যুক্ত করা হয়নি।');
-
-  }catch(error){
-    showMessage('⚠️ বিজ্ঞাপন দেখানো যায়নি',
-      'এই মুহূর্তে বিজ্ঞাপন পাওয়া যাচ্ছে না। কিছুক্ষণ পরে আবার চেষ্টা করো।');
-
-  }finally{
-    watchButton.disabled=false;
-    watchButton.querySelector('b').textContent='Watch Ads';
+  try {
+    const result = await api("/api/withdraw", {method, phone, amount});
+    msg.textContent = result.message || "আবেদন জমা হয়েছে।";
+    loadAccount();
+  } catch (e) {
+    msg.textContent = e.message;
   }
-});
+}
 
-const copy={
-balance:['💰 My Balance','আসল ব্যালেন্স নিরাপদ সার্ভার থেকে যুক্ত করার পর এখানে দেখাবে।'],
-refer:['👥 Refer & Earn','Referral system এখনো যুক্ত করা হয়নি।'],
-withdraw:['💳 Withdraw','bKash / Nagad withdrawal system এখনো তৈরি করা হয়নি।'],
-stats:['📊 Statistics','তোমার বিজ্ঞাপন ও আয়ের হিসাব এখানে দেখাবে।'],
-profile:['👤 My Profile','Telegram account: '+(tg?.initDataUnsafe?.user?.first_name||'Guest')]
-};
+function copyReferral() {
+  const link = document.getElementById("refLink").value;
+  if (!link) {
+    alert("রেফারেল লিংক এখনো তৈরি হয়নি।");
+    return;
+  }
+  navigator.clipboard.writeText(link);
+  alert("লিংক কপি হয়েছে!");
+}
 
-document.querySelectorAll('[data-action]:not(#watchAds)').forEach(button=>{
-  button.addEventListener('click',()=>{
-    const item=copy[button.dataset.action];
-    showMessage(item[0],item[1]);
-    tg?.HapticFeedback?.impactOccurred('light');
-  });
-});
+loadAccount();
 </script>
 </body>
 </html>
