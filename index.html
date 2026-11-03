@@ -1,22 +1,100 @@
+
 <!doctype html>
-<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>AdEarn</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AdEarn</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- Monetag SDK -->
+<script src="//libtl.com/sdk.js" data-zone="12185380" data-sdk="show_12185380"></script>
+
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--card:#151d33;--muted:#9aa8c7;--accent:#35d0a0;--line:#26324d}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7ff;font-family:system-ui,sans-serif;padding:18px 15px 30px}.wrap{max-width:520px;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;margin:8px 2px 22px}.brand{font-size:21px;font-weight:800}.brand span{color:var(--accent)}.profile{font-size:12px;color:var(--muted);background:#1b2741;padding:8px 12px;border-radius:20px}.hero{background:linear-gradient(120deg,#1d755f,#174b63);padding:20px;border-radius:22px}.eyebrow{font-size:12px;color:#d1fff0}.balance-label{font-size:13px;color:#d7f8ed;margin-top:12px}.balance{font-size:34px;font-weight:800;margin:3px 0 14px}.hero small{color:#d1fff0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:17px 0}.tile{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px 14px;min-height:112px;color:inherit;text-align:left;font:inherit;cursor:pointer}.ico{font-size:25px}.tile b{display:block;margin-top:9px;font-size:15px}.tile small{color:var(--muted);font-size:11px}.section{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px;margin-top:12px}.section h3{margin:0 0 8px;font-size:15px}.section p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}.bottom{margin:20px 4px 0;text-align:center;color:#7785a4;font-size:11px}
-</style></head><body><div class="wrap">
-<header class="top"><div class="brand">Ad<span>Earn</span> 🎬</div><div class="profile" id="profile">👤 Guest</div></header>
-<section class="hero"><div class="eyebrow">WELCOME TO ADEARN</div><div class="balance-label">তোমার মোট ব্যালেন্স</div><div class="balance">৳0.00</div><small>BDT · Demo display</small></section>
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7ff;font-family:system-ui,sans-serif;padding:18px 15px 30px}
+.wrap{max-width:520px;margin:auto}
+.top{display:flex;align-items:center;justify-content:space-between;margin:8px 2px 22px}
+.brand{font-size:21px;font-weight:800}
+.brand span{color:var(--accent)}
+.profile{font-size:12px;color:var(--muted);background:#1b2741;padding:8px 12px;border-radius:20px}
+.hero{background:linear-gradient(120deg,#1d755f,#174b63);padding:20px;border-radius:22px}
+.eyebrow{font-size:12px;color:#d1fff0}
+.balance-label{font-size:13px;color:#d7f8ed;margin-top:12px}
+.balance{font-size:34px;font-weight:800;margin:3px 0 14px}
+.hero small{color:#d1fff0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:17px 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px 14px;min-height:112px;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.ico{font-size:25px}
+.tile b{display:block;margin-top:9px;font-size:15px}
+.tile small{color:var(--muted);font-size:11px}
+.section{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px;margin-top:12px}
+.section h3{margin:0 0 8px;font-size:15px}
+.section p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.bottom{margin:20px 4px 0;text-align:center;color:#7785a4;font-size:11px}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<header class="top">
+<div class="brand">Ad<span>Earn</span> 🎬</div>
+<div class="profile" id="profile">👤 Guest</div>
+</header>
+
+<section class="hero">
+<div class="eyebrow">WELCOME TO ADEARN</div>
+<div class="balance-label">তোমার মোট ব্যালেন্স</div>
+<div class="balance">৳0.00</div>
+<small>BDT · Demo display</small>
+</section>
+
 <div class="grid">
 <button class="tile" data-action="ads"><span class="ico">📺</span><b>Watch Ads</b><small>বিজ্ঞাপন দেখে আয়</small></button>
 <button class="tile" data-action="balance"><span class="ico">💰</span><b>My Balance</b><small>ব্যালেন্স দেখো</small></button>
 <button class="tile" data-action="refer"><span class="ico">👥</span><b>Refer & Earn</b><small>বন্ধুকে আমন্ত্রণ</small></button>
 <button class="tile" data-action="withdraw"><span class="ico">💳</span><b>Withdraw</b><small>bKash / Nagad</small></button>
 <button class="tile" data-action="stats"><span class="ico">📊</span><b>Statistics</b><small>তোমার কাজের হিসাব</small></button>
-<button class="tile" data-action="profile"><span class="ico">👤</span><b>My Profile</b><small>অ্যাকাউন্ট তথ্য</small></button></div>
-<section class="section"><h3 id="message-title">📌 গুরুত্বপূর্ণ</h3><p id="message">এটি AdEarn অ্যাপের প্রাথমিক ডিজাইন। আসল বিজ্ঞাপন, ব্যালেন্স ও টাকা তোলার সুবিধা চালু করতে নিরাপদ সার্ভার/API এবং অনুমোদিত ad-network যুক্ত করতে হবে।</p></section>
-<p class="bottom">AdEarn · Secure rewards experience</p></div>
+<button class="tile" data-action="profile"><span class="ico">👤</span><b>My Profile</b><small>অ্যাকাউন্ট তথ্য</small></button>
+</div>
+
+<section class="section">
+<h3 id="message-title">📌 গুরুত্বপূর্ণ</h3>
+<p id="message">এটি AdEarn অ্যাপের প্রাথমিক ডিজাইন। আসল বিজ্ঞাপন, ব্যালেন্স ও টাকা তোলার সুবিধা চালু করতে নিরাপদ সার্ভার/API এবং অনুমোদিত ad-network যুক্ত করতে হবে।</p>
+</section>
+
+<p class="bottom">AdEarn · Secure rewards experience</p>
+</div>
+
 <script>
-const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();const u=tg.initDataUnsafe?.user;if(u)document.getElementById('profile').textContent='👤 '+(u.first_name||'User');}
-const copy={ads:['📺 Watch Ads','এখনো কোনো ad-network যুক্ত হয়নি। অনুমোদিত provider যুক্ত হলে এখান থেকে বিজ্ঞাপন চালু হবে।'],balance:['💰 My Balance','আসল ব্যালেন্স সার্ভার থেকে যুক্ত করার পর এখানে দেখাবে।'],refer:['👥 Refer & Earn','তোমার ব্যক্তিগত referral link backend যুক্ত হলে এখানে দেখাবে।'],withdraw:['💳 Withdraw','bKash / Nagad withdrawal request নিরাপদভাবে server থেকে পরিচালিত হবে।'],stats:['📊 Statistics','তোমার ad views, referrals এবং earning history এখানে দেখাবে।'],profile:['👤 My Profile','Telegram account: '+(tg?.initDataUnsafe?.user?.first_name||'Guest')]};
-document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>{const v=copy[b.dataset.action];document.getElementById('message-title').textContent=v[0];document.getElementById('message').textContent=v[1];tg?.HapticFeedback?.impactOccurred('light');}));
-</script></body></html>
+const tg=window.Telegram?.WebApp;
+
+if(tg){
+  tg.ready();
+  tg.expand();
+  const u=tg.initDataUnsafe?.user;
+  if(u) document.getElementById('profile').textContent='👤 '+(u.first_name||'User');
+}
+
+const copy={
+ads:['📺 Watch Ads','Monetag SDK যুক্ত হয়েছে। বিজ্ঞাপন চালু করতে Monetag Dashboard থেকে Rewarded Interstitial Activate করতে হবে।'],
+balance:['💰 My Balance','আসল ব্যালেন্স সার্ভার থেকে যুক্ত করার পর এখানে দেখাবে।'],
+refer:['👥 Refer & Earn','তোমার ব্যক্তিগত referral link backend যুক্ত হলে এখানে দেখাবে।'],
+withdraw:['💳 Withdraw','bKash / Nagad withdrawal request নিরাপদভাবে server থেকে পরিচালিত হবে।'],
+stats:['📊 Statistics','তোমার ad views, referrals এবং earning history এখানে দেখাবে।'],
+profile:['👤 My Profile','Telegram account: '+(tg?.initDataUnsafe?.user?.first_name||'Guest')]
+};
+
+document.querySelectorAll('[data-action]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const v=copy[b.dataset.action];
+    document.getElementById('message-title').textContent=v[0];
+    document.getElementById('message').textContent=v[1];
+    tg?.HapticFeedback?.impactOccurred('light');
+  });
+});
+</script>
+</body>
+</html>
