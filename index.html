@@ -7,12 +7,10 @@
 <title>AdEarn</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<!-- Monetag SDK -->
 <script src="//libtl.com/sdk.js" data-zone="12185380" data-sdk="show_12185380"></script>
 
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--card:#151d33;--muted:#9aa8c7;--accent:#35d0a0;--line:#26324d}
+:root{color-scheme:dark;--card:#151d33;--muted:#9aa8c7;--accent:#35d0a0;--line:#26324d}
 *{box-sizing:border-box}
 body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7ff;font-family:system-ui,sans-serif;padding:18px 15px 30px}
 .wrap{max-width:520px;margin:auto}
@@ -27,6 +25,7 @@ body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7
 .hero small{color:#d1fff0}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:17px 0}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px 14px;min-height:112px;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.tile:disabled{opacity:.6;cursor:wait}
 .ico{font-size:25px}
 .tile b{display:block;margin-top:9px;font-size:15px}
 .tile small{color:var(--muted);font-size:11px}
@@ -39,6 +38,7 @@ body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7
 
 <body>
 <div class="wrap">
+
 <header class="top">
 <div class="brand">Ad<span>Earn</span> 🎬</div>
 <div class="profile" id="profile">👤 Guest</div>
@@ -52,17 +52,46 @@ body{margin:0;background:linear-gradient(160deg,#111a31,#090e1b 60%);color:#f5f7
 </section>
 
 <div class="grid">
-<button class="tile" data-action="ads"><span class="ico">📺</span><b>Watch Ads</b><small>বিজ্ঞাপন দেখে আয়</small></button>
-<button class="tile" data-action="balance"><span class="ico">💰</span><b>My Balance</b><small>ব্যালেন্স দেখো</small></button>
-<button class="tile" data-action="refer"><span class="ico">👥</span><b>Refer & Earn</b><small>বন্ধুকে আমন্ত্রণ</small></button>
-<button class="tile" data-action="withdraw"><span class="ico">💳</span><b>Withdraw</b><small>bKash / Nagad</small></button>
-<button class="tile" data-action="stats"><span class="ico">📊</span><b>Statistics</b><small>তোমার কাজের হিসাব</small></button>
-<button class="tile" data-action="profile"><span class="ico">👤</span><b>My Profile</b><small>অ্যাকাউন্ট তথ্য</small></button>
+<button class="tile" id="watchAds" data-action="ads">
+<span class="ico">📺</span>
+<b>Watch Ads</b>
+<small>বিজ্ঞাপন দেখে আয়</small>
+</button>
+
+<button class="tile" data-action="balance">
+<span class="ico">💰</span>
+<b>My Balance</b>
+<small>ব্যালেন্স দেখো</small>
+</button>
+
+<button class="tile" data-action="refer">
+<span class="ico">👥</span>
+<b>Refer & Earn</b>
+<small>বন্ধুকে আমন্ত্রণ</small>
+</button>
+
+<button class="tile" data-action="withdraw">
+<span class="ico">💳</span>
+<b>Withdraw</b>
+<small>bKash / Nagad</small>
+</button>
+
+<button class="tile" data-action="stats">
+<span class="ico">📊</span>
+<b>Statistics</b>
+<small>তোমার কাজের হিসাব</small>
+</button>
+
+<button class="tile" data-action="profile">
+<span class="ico">👤</span>
+<b>My Profile</b>
+<small>অ্যাকাউন্ট তথ্য</small>
+</button>
 </div>
 
 <section class="section">
 <h3 id="message-title">📌 গুরুত্বপূর্ণ</h3>
-<p id="message">এটি AdEarn অ্যাপের প্রাথমিক ডিজাইন। আসল বিজ্ঞাপন, ব্যালেন্স ও টাকা তোলার সুবিধা চালু করতে নিরাপদ সার্ভার/API এবং অনুমোদিত ad-network যুক্ত করতে হবে।</p>
+<p id="message">AdEarn-এ স্বাগতম! বিজ্ঞাপন দেখতে Watch Ads চাপ দাও।</p>
 </section>
 
 <p class="bottom">AdEarn · Secure rewards experience</p>
@@ -74,24 +103,61 @@ const tg=window.Telegram?.WebApp;
 if(tg){
   tg.ready();
   tg.expand();
-  const u=tg.initDataUnsafe?.user;
-  if(u) document.getElementById('profile').textContent='👤 '+(u.first_name||'User');
+
+  const user=tg.initDataUnsafe?.user;
+  if(user){
+    document.getElementById('profile').textContent=
+      '👤 '+(user.first_name||'User');
+  }
 }
 
+const title=document.getElementById('message-title');
+const message=document.getElementById('message');
+const watchButton=document.getElementById('watchAds');
+
+function showMessage(t,m){
+  title.textContent=t;
+  message.textContent=m;
+}
+
+watchButton.addEventListener('click',async()=>{
+  if(typeof window.show_12185380!=='function'){
+    showMessage('⚠️ বিজ্ঞাপন চালু হয়নি',
+      'Monetag SDK লোড হয়নি। ইন্টারনেট সংযোগ ও SDK সেটআপ পরীক্ষা করো।');
+    return;
+  }
+
+  watchButton.disabled=true;
+  watchButton.querySelector('b').textContent='Loading Ad...';
+
+  try{
+    await window.show_12185380();
+
+    showMessage('✅ বিজ্ঞাপন শেষ',
+      'বিজ্ঞাপন দেখার প্রক্রিয়া শেষ হয়েছে। Reward যোগ করার জন্য সার্ভার যাচাই এখনো যুক্ত করা হয়নি।');
+
+  }catch(error){
+    showMessage('⚠️ বিজ্ঞাপন দেখানো যায়নি',
+      'এই মুহূর্তে বিজ্ঞাপন পাওয়া যাচ্ছে না। কিছুক্ষণ পরে আবার চেষ্টা করো।');
+
+  }finally{
+    watchButton.disabled=false;
+    watchButton.querySelector('b').textContent='Watch Ads';
+  }
+});
+
 const copy={
-ads:['📺 Watch Ads','Monetag SDK যুক্ত হয়েছে। বিজ্ঞাপন চালু করতে Monetag Dashboard থেকে Rewarded Interstitial Activate করতে হবে।'],
-balance:['💰 My Balance','আসল ব্যালেন্স সার্ভার থেকে যুক্ত করার পর এখানে দেখাবে।'],
-refer:['👥 Refer & Earn','তোমার ব্যক্তিগত referral link backend যুক্ত হলে এখানে দেখাবে।'],
-withdraw:['💳 Withdraw','bKash / Nagad withdrawal request নিরাপদভাবে server থেকে পরিচালিত হবে।'],
-stats:['📊 Statistics','তোমার ad views, referrals এবং earning history এখানে দেখাবে।'],
+balance:['💰 My Balance','আসল ব্যালেন্স নিরাপদ সার্ভার থেকে যুক্ত করার পর এখানে দেখাবে।'],
+refer:['👥 Refer & Earn','Referral system এখনো যুক্ত করা হয়নি।'],
+withdraw:['💳 Withdraw','bKash / Nagad withdrawal system এখনো তৈরি করা হয়নি।'],
+stats:['📊 Statistics','তোমার বিজ্ঞাপন ও আয়ের হিসাব এখানে দেখাবে।'],
 profile:['👤 My Profile','Telegram account: '+(tg?.initDataUnsafe?.user?.first_name||'Guest')]
 };
 
-document.querySelectorAll('[data-action]').forEach(b=>{
-  b.addEventListener('click',()=>{
-    const v=copy[b.dataset.action];
-    document.getElementById('message-title').textContent=v[0];
-    document.getElementById('message').textContent=v[1];
+document.querySelectorAll('[data-action]:not(#watchAds)').forEach(button=>{
+  button.addEventListener('click',()=>{
+    const item=copy[button.dataset.action];
+    showMessage(item[0],item[1]);
     tg?.HapticFeedback?.impactOccurred('light');
   });
 });
