@@ -71,7 +71,7 @@ input,select{
  <div class="grid">
   <button onclick="showSection('ads')">📺 Watch Ads</button>
   <button onclick="showSection('balancePage')">💰 My Balance</button>
-  <button onclick="showSection('referral')">👥 Refer & Earn</button>
+  <button onclick="showSection('referral')">👥 Refer &amp; Earn</button>
   <button onclick="showSection('withdraw')">💳 Withdraw</button>
   <button onclick="showSection('statistics')">📊 Statistics</button>
   <button onclick="showSection('profile')">👤 My Profile</button>
@@ -95,7 +95,7 @@ input,select{
 
 <div id="referral" class="section card">
  <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
- <h3>👥 Refer & Earn</h3>
+ <h3>👥 Refer &amp; Earn</h3>
  <p class="muted">তোমার রেফারেল লিংক</p>
  <input id="refLink" readonly placeholder="রেফারেল লিংক">
  <button class="primary" onclick="copyReferral()">লিংক কপি</button>
@@ -139,111 +139,180 @@ input,select{
 
 <script>
 const tg = window.Telegram?.WebApp;
+
 tg?.ready();
 tg?.expand();
 
 const user = tg?.initDataUnsafe?.user;
 
 if(user){
- document.getElementById("username").textContent=user.first_name||"বন্ধু";
- document.getElementById("profileName").textContent=
- "Telegram account: "+(user.first_name||"User");
+ document.getElementById("username").textContent =
+  user.first_name || "বন্ধু";
+
+ document.getElementById("profileName").textContent =
+  "Telegram account: " + (user.first_name || "User");
 }
 
-// FadeHost API server address
 const API_BASE = "https://ad-earning-bot.fadehost.app";
 
 function showSection(id){
- document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+ document.querySelectorAll(".section").forEach(s =>
+  s.classList.remove("active")
+ );
+
  document.getElementById(id).classList.add("active");
- if(id==="balancePage"||id==="statistics"||id==="profile")loadAccount();
+
+ if(id === "balancePage" || id === "statistics" || id === "profile"){
+  loadAccount();
+ }
+
+ if(id === "referral"){
+  loadAccount();
+ }
 }
 
-async function api(path,body){
- const response=await fetch(API_BASE+path,{
-  method:body?"POST":"GET",
-  headers:{
-   "Content-Type":"application/json",
-   "Authorization":"tma "+(tg?.initData||"")
+async function api(path, body){
+ const initData = tg?.initData || "";
+
+ if(!initData){
+  throw new Error("Telegram-এর ভিতর থেকে অ্যাপটি খুলুন।");
+ }
+
+ const response = await fetch(API_BASE + path, {
+  method: body ? "POST" : "GET",
+  headers: {
+   "Content-Type": "application/json",
+   "X-Telegram-Init-Data": initData
   },
-  body:body?JSON.stringify(body):undefined
+  body: body ? JSON.stringify(body) : undefined
  });
- const data=await response.json();
- if(!response.ok)throw new Error(data.error||"অনুরোধ সফল হয়নি");
+
+ let data;
+
+ try{
+  data = await response.json();
+ }catch(e){
+  throw new Error("সার্ভার থেকে সঠিক উত্তর পাওয়া যায়নি।");
+ }
+
+ if(!response.ok){
+  throw new Error(data.error || "অনুরোধ সফল হয়নি");
+ }
+
  return data;
 }
 
 async function loadAccount(){
- try{
-  const data=await api("/api/me");
-  const balance=Number(data.balance||0).toFixed(2);
+ const message = document.getElementById("message");
 
-  document.getElementById("balance").textContent="৳"+balance;
-  document.getElementById("balance2").textContent="৳"+balance;
-  document.getElementById("adsWatched").textContent=data.ads_today||0;
-  document.getElementById("referrals").textContent=data.referrals||0;
-  document.getElementById("dailyLimit").textContent=data.daily_limit||0;
-  document.getElementById("refLink").value=data.referral_link||"";
+ try{
+  const data = await api("/api/me");
+
+  const balance = Number(data.balance || 0).toFixed(2);
+
+  document.getElementById("balance").textContent = "৳" + balance;
+  document.getElementById("balance2").textContent = "৳" + balance;
+
+  document.getElementById("adsWatched").textContent =
+   data.ads_today || 0;
+
+  document.getElementById("referrals").textContent =
+   data.referrals || 0;
+
+  document.getElementById("dailyLimit").textContent =
+   data.daily_limit || 0;
+
+  document.getElementById("refLink").value =
+   data.referral_link || "";
+
+  message.textContent = "";
 
  }catch(e){
-  document.getElementById("message").textContent=e.message;
+  message.textContent = e.message;
  }
 }
 
 async function watchAd(){
- const msg=document.getElementById("adMessage");
- msg.textContent="বিজ্ঞাপন চালু হচ্ছে...";
+ const msg = document.getElementById("adMessage");
+
+ msg.textContent = "বিজ্ঞাপন চালু হচ্ছে...";
 
  try{
-  if(typeof window.show_12185380!=="function"){
+  if(typeof window.show_12185380 !== "function"){
    throw new Error("বিজ্ঞাপন এখন পাওয়া যাচ্ছে না।");
   }
 
   await window.show_12185380();
 
-  msg.textContent="বিজ্ঞাপন শেষ হয়েছে। সার্ভার যাচাই ছাড়া কোনো পুরস্কার যোগ হবে না।";
+  msg.textContent =
+   "বিজ্ঞাপন শেষ হয়েছে। সার্ভার যাচাই ছাড়া কোনো পুরস্কার যোগ হবে না।";
 
  }catch(e){
-  msg.textContent=e.message||"বিজ্ঞাপন চালু করা যায়নি।";
+  msg.textContent = e.message || "বিজ্ঞাপন চালু করা যায়নি।";
  }
 }
 
 async function submitWithdraw(){
- const msg=document.getElementById("withdrawMessage");
- const method=document.getElementById("method").value;
- const phone=document.getElementById("phone").value.trim();
- const amount=Number(document.getElementById("amount").value);
+ const msg = document.getElementById("withdrawMessage");
+
+ const method = document.getElementById("method").value;
+ const phone = document.getElementById("phone").value.trim();
+ const amount = Number(document.getElementById("amount").value);
 
  if(!/^01[3-9]\d{8}$/.test(phone)){
-  msg.textContent="সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দাও।";
+  msg.textContent = "সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দাও।";
   return;
  }
 
- if(!Number.isFinite(amount)||amount<=0){
-  msg.textContent="সঠিক টাকার পরিমাণ লিখো।";
+ if(!Number.isFinite(amount) || amount <= 0){
+  msg.textContent = "সঠিক টাকার পরিমাণ লিখো।";
   return;
  }
 
  try{
-  const result=await api("/api/withdraw",{method,phone,amount});
-  msg.textContent=result.message||"আবেদন জমা হয়েছে।";
-  loadAccount();
+  const result = await api("/api/withdraw", {
+   method: method === "bkash" ? "bKash" : "Nagad",
+   account: phone,
+   amount: amount
+  });
+
+  msg.textContent = result.message || "আবেদন জমা হয়েছে।";
+
+  await loadAccount();
+
  }catch(e){
-  msg.textContent=e.message;
+  msg.textContent = e.message;
  }
 }
 
 function copyReferral(){
- const link=document.getElementById("refLink").value;
+ const link = document.getElementById("refLink").value;
 
  if(!link){
   alert("রেফারেল লিংক এখনো তৈরি হয়নি।");
   return;
  }
 
- navigator.clipboard.writeText(link)
- .then(()=>alert("লিংক কপি হয়েছে!"))
- .catch(()=>alert("লিংক কপি করা যায়নি।"));
+ if(navigator.clipboard && window.isSecureContext){
+  navigator.clipboard.writeText(link)
+   .then(() => alert("লিংক কপি হয়েছে!"))
+   .catch(() => fallbackCopy(link));
+ }else{
+  fallbackCopy(link);
+ }
+}
+
+function fallbackCopy(link){
+ const input = document.getElementById("refLink");
+ input.value = link;
+ input.select();
+
+ try{
+  document.execCommand("copy");
+  alert("লিংক কপি হয়েছে!");
+ }catch(e){
+  alert("লিংক কপি করা যায়নি।");
+ }
 }
 
 loadAccount();
