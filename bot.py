@@ -1,3 +1,4 @@
+
 import os
 import re
 import json
@@ -30,7 +31,7 @@ WEB_ORIGIN = "https://mdmahdihasanm4-blip.github.io"
 PORT = int(os.getenv("PORT", "8080"))
 TIMEZONE = ZoneInfo("Asia/Dhaka")
 
-# পুরোনো bot.db থাকলে সেটিই ব্যবহার হবে; কোনো ডেটাবেস মুছে ফেলা হবে না।
+# পুরোনো ডেটাবেস থাকলে সেটিই ব্যবহার হবে।
 DB_FILE = "bot.db" if os.path.exists("bot.db") else "adearn.db"
 
 app = Flask(__name__)
@@ -82,6 +83,7 @@ def init_db():
             "min_withdraw": "50",
             "daily_limit": "20",
         }
+
         for key, value in defaults.items():
             cur.execute(
                 "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)",
@@ -130,11 +132,13 @@ def add_user(user_id, username="", first_name="", referred_by=None):
         VALUES (?, ?, ?, ?)""",
         (user_id, username or "", first_name or "", referred_by),
     )
+
     conn.execute(
         """UPDATE users SET username=?, first_name=?
         WHERE user_id=?""",
         (username or "", first_name or "", user_id),
     )
+
     conn.commit()
     conn.close()
 
@@ -146,6 +150,7 @@ def verify_telegram_data(init_data):
     try:
         parsed = dict(parse_qsl(init_data, keep_blank_values=True))
         received_hash = parsed.pop("hash", None)
+
         if not received_hash:
             return None
 
@@ -169,6 +174,7 @@ def verify_telegram_data(init_data):
             return None
 
         auth_date = int(parsed.get("auth_date", "0"))
+
         if abs(datetime.now(timezone.utc).timestamp() - auth_date) > 86400:
             return None
 
@@ -182,17 +188,22 @@ def verify_telegram_data(init_data):
 @app.after_request
 def add_cors(response):
     origin = request.headers.get("Origin", "")
+
     if origin == WEB_ORIGIN:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+
     return response
 
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "database": DB_FILE})
+    return jsonify({
+        "status": "ok",
+        "database": DB_FILE,
+    })
 
 
 @app.route("/api/me", methods=["GET", "OPTIONS"])
@@ -200,11 +211,19 @@ def api_me():
     if request.method == "OPTIONS":
         return "", 204
 
-    user = verify_telegram_data(request.headers.get("X-Telegram-Init-Data", ""))
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
     if not user:
         return jsonify({"error": "Telegram verification failed"}), 401
 
-    add_user(user["id"], user.get("username"), user.get("first_name"))
+    add_user(
+        user["id"],
+        user.get("username"),
+        user.get("first_name"),
+    )
+
     row = get_user(user["id"])
 
     return jsonify({
@@ -223,11 +242,15 @@ def api_withdraw():
     if request.method == "OPTIONS":
         return "", 204
 
-    user = verify_telegram_data(request.headers.get("X-Telegram-Init-Data", ""))
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
     if not user:
         return jsonify({"error": "Telegram verification failed"}), 401
 
     data = request.get_json(silent=True) or {}
+
     try:
         amount = float(data.get("amount", 0))
     except (TypeError, ValueError):
@@ -235,6 +258,9 @@ def api_withdraw():
 
     method = str(data.get("method", "")).strip()
     account = str(data.get("account", "")).strip()
+
+    if amount <= 0:
+        return jsonify({"error": "সঠিক পরিমাণ লিখুন"}), 400
 
     if amount < float(setting("min_withdraw", "50")):
         return jsonify({"error": "ন্যূনতম উত্তোলনের পরিমাণ পূরণ হয়নি"}), 400
@@ -246,8 +272,10 @@ def api_withdraw():
         return jsonify({"error": "সঠিক মোবাইল নম্বর দিন"}), 400
 
     conn = db()
+
     try:
         conn.execute("BEGIN IMMEDIATE")
+
         row = conn.execute(
             "SELECT balance FROM users WHERE user_id=?",
             (user["id"],),
@@ -261,34 +289,44 @@ def api_withdraw():
             "UPDATE users SET balance=balance-? WHERE user_id=?",
             (amount, user["id"]),
         )
+
         conn.execute(
             """INSERT INTO withdrawals
             (user_id, amount, method, account, status)
             VALUES (?, ?, ?, ?, 'pending')""",
             (user["id"], amount, method, account),
         )
+
         conn.commit()
 
     except Exception:
         conn.rollback()
         return jsonify({"error": "উত্তোলনের অনুরোধ নেওয়া যায়নি"}), 500
+
     finally:
         conn.close()
 
-    return jsonify({"success": True, "message": "উত্তোলনের অনুরোধ জমা হয়েছে"})
+    return jsonify({
+        "success": True,
+        "message": "উত্তোলনের অনুরোধ জমা হয়েছে",
+    })
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_user = update.effective_user
+
     if not tg_user:
         return
 
     referred_by = None
+
     if context.args:
         try:
             candidate = int(context.args[0])
+
             if candidate != tg_user.id:
                 referred_by = candidate
+
         except ValueError:
             pass
 
@@ -317,7 +355,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(update.effective_user.id)
     amount = float(user["balance"]) if user else 0
-    await update.message.reply_text(f"আপনার ব্যালেন্স: ৳{amount:.2f}")
+
+    await update.message.reply_text(
+        f"আপনার ব্যালেন্স: ৳{amount:.2f}"
+    )
 
 
 async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -346,10 +387,15 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     conn = db()
-    users = conn.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]
+
+    users = conn.execute(
+        "SELECT COUNT(*) n FROM users"
+    ).fetchone()["n"]
+
     pending = conn.execute(
         "SELECT COUNT(*) n FROM withdrawals WHERE status='pending'"
     ).fetchone()["n"]
+
     conn.close()
 
     await update.message.reply_text(
@@ -360,15 +406,23 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def setmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
+
     if not context.args:
         await update.message.reply_text("ব্যবহার: /setmin 50")
         return
+
     try:
         value = float(context.args[0])
+
         if value <= 0:
             raise ValueError
+
         set_setting("min_withdraw", value)
-        await update.message.reply_text(f"সর্বনিম্ন উত্তোলন ৳{value} করা হয়েছে")
+
+        await update.message.reply_text(
+            f"সর্বনিম্ন উত্তোলন ৳{value} করা হয়েছে"
+        )
+
     except ValueError:
         await update.message.reply_text("সঠিক পরিমাণ দিন")
 
@@ -376,15 +430,23 @@ async def setmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def setlimit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
+
     if not context.args:
         await update.message.reply_text("ব্যবহার: /setlimit 20")
         return
+
     try:
         value = int(context.args[0])
+
         if value <= 0:
             raise ValueError
+
         set_setting("daily_limit", value)
-        await update.message.reply_text(f"দৈনিক সীমা {value} করা হয়েছে")
+
+        await update.message.reply_text(
+            f"দৈনিক সীমা {value} করা হয়েছে"
+        )
+
     except ValueError:
         await update.message.reply_text("সঠিক সংখ্যা দিন")
 
@@ -392,41 +454,54 @@ async def setlimit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
+
     if len(context.args) != 2:
-        await update.message.reply_text("ব্যবহার: /credit USER_ID AMOUNT")
+        await update.message.reply_text(
+            "ব্যবহার: /credit USER_ID AMOUNT"
+        )
         return
 
     try:
         user_id = int(context.args[0])
         amount = float(context.args[1])
+
         if amount <= 0:
             raise ValueError
+
     except ValueError:
-        await update.message.reply_text("সঠিক USER_ID ও AMOUNT দিন")
+        await update.message.reply_text(
+            "সঠিক USER_ID ও AMOUNT দিন"
+        )
         return
 
     conn = db()
+
     conn.execute(
         "UPDATE users SET balance=balance+? WHERE user_id=?",
         (amount, user_id),
     )
+
     conn.commit()
     changed = conn.total_changes
     conn.close()
 
     await update.message.reply_text(
-        "ব্যালেন্স আপডেট করা হয়েছে।" if changed else "ইউজার পাওয়া যায়নি।"
+        "ব্যালেন্স আপডেট করা হয়েছে।"
+        if changed
+        else "ইউজার পাওয়া যায়নি।"
     )
 
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
+
     if not context.args:
         await update.message.reply_text("ব্যবহার: /approve ID")
         return
 
     conn = db()
+
     row = conn.execute(
         "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
         (context.args[0],),
@@ -441,6 +516,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "UPDATE withdrawals SET status='paid' WHERE id=?",
         (row["id"],),
     )
+
     conn.commit()
     conn.close()
 
@@ -453,11 +529,13 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
+
     if not context.args:
         await update.message.reply_text("ব্যবহার: /reject ID")
         return
 
     conn = db()
+
     row = conn.execute(
         "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
         (context.args[0],),
@@ -472,10 +550,12 @@ async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "UPDATE withdrawals SET status='rejected' WHERE id=?",
         (row["id"],),
     )
+
     conn.execute(
         "UPDATE users SET balance=balance+? WHERE user_id=?",
         (row["amount"], row["user_id"]),
     )
+
     conn.commit()
     conn.close()
 
@@ -485,18 +565,42 @@ async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def run_web():
-    app.run(host="0.0.0.0", port=PORT, use_reloader=False)
+    app.run(
+        host="0.0.0.0",
+        port=PORT,
+        use_reloader=False,
+    )
+
+
+# গুরুত্বপূর্ণ: Polling চালুর আগে পুরোনো Webhook সরানো হবে।
+async def post_init(application):
+    await application.bot.delete_webhook(
+        drop_pending_updates=False
+    )
 
 
 def main():
     init_db()
 
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN environment variable is missing")
+        raise RuntimeError(
+            "BOT_TOKEN environment variable is missing"
+        )
 
-    threading.Thread(target=run_web, daemon=True).start()
+    # ওয়েব সার্ভার চালু
+    threading.Thread(
+        target=run_web,
+        daemon=True,
+    ).start()
 
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Telegram bot চালু
+    application = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
+
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(CommandHandler("withdraw", withdraw))
