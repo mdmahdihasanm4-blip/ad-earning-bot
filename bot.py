@@ -1,4 +1,3 @@
-
 import os
 import re
 import json
@@ -23,84 +22,81 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ---------------- CONFIG ----------------
-
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN", "")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "hdjkshdvhsjbot")
-
 WEB_URL = "https://mdmahdihasanm4-blip.github.io/ad-earning-bot/"
 WEB_ORIGIN = "https://mdmahdihasanm4-blip.github.io"
-
 PORT = int(os.getenv("PORT", "8080"))
-DB_FILE = "adearn.db"
-
 TIMEZONE = ZoneInfo("Asia/Dhaka")
 
-api = Flask(__name__)
+# পুরোনো bot.db থাকলে সেটিই ব্যবহার হবে; কোনো ডেটাবেস মুছে ফেলা হবে না।
+DB_FILE = "bot.db" if os.path.exists("bot.db") else "adearn.db"
 
-# ---------------- DATABASE ----------------
+app = Flask(__name__)
+db_lock = threading.Lock()
+
 
 def db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_FILE, timeout=20)
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def setup_database():
-    conn = db()
+def init_db():
+    with db_lock:
+        conn = db()
+        cur = conn.cursor()
 
-    conn.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
-            name TEXT DEFAULT '',
+            username TEXT DEFAULT '',
+            first_name TEXT DEFAULT '',
             balance REAL DEFAULT 0,
-            ads_today INTEGER DEFAULT 0,
-            last_ad_date TEXT DEFAULT '',
             referred_by INTEGER DEFAULT NULL,
             joined_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+        """)
 
-    conn.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS withdrawals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            amount REAL,
-            method TEXT,
-            phone TEXT,
+            user_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            method TEXT NOT NULL,
+            account TEXT NOT NULL,
             status TEXT DEFAULT 'pending',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+        """)
 
-    conn.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
-            value TEXT
+            value TEXT NOT NULL
         )
-    """)
+        """)
 
-    defaults = {
-        "minimum_withdraw": "50",
-        "daily_ad_limit": "20",
-    }
+        defaults = {
+            "min_withdraw": "50",
+            "daily_limit": "20",
+        }
+        for key, value in defaults.items():
+            cur.execute(
+                "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)",
+                (key, value),
+            )
 
-    for key, value in defaults.items():
-        conn.execute(
-            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
-            (key, value)
-        )
-
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
 
 
-def get_setting(key, default="0"):
+def setting(key, default):
     conn = db()
     row = conn.execute(
         "SELECT value FROM settings WHERE key=?",
-        (key,)
+        (key,),
     ).fetchone()
     conn.close()
     return row["value"] if row else default
@@ -109,316 +105,224 @@ def get_setting(key, default="0"):
 def set_setting(key, value):
     conn = db()
     conn.execute(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-        (key, str(value))
+        "INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)",
+        (key, str(value)),
     )
     conn.commit()
     conn.close()
 
 
-def ensure_user(user_id, name="", referred_by=None):
+def get_user(user_id):
     conn = db()
-
-    existing = conn.execute(
-        "SELECT user_id FROM users WHERE user_id=?",
-        (user_id,)
+    row = conn.execute(
+        "SELECT * FROM users WHERE user_id=?",
+        (user_id,),
     ).fetchone()
+    conn.close()
+    return row
 
-    if not existing:
-        if referred_by == user_id:
-            referred_by = None
 
-        conn.execute("""
-            INSERT INTO users (user_id, name, referred_by)
-            VALUES (?, ?, ?)
-        """, (user_id, name, referred_by))
-
-    else:
-        conn.execute(
-            "UPDATE users SET name=? WHERE user_id=?",
-            (name, user_id)
-        )
-
+def add_user(user_id, username="", first_name="", referred_by=None):
+    conn = db()
+    conn.execute(
+        """INSERT OR IGNORE INTO users
+        (user_id, username, first_name, referred_by)
+        VALUES (?, ?, ?, ?)""",
+        (user_id, username or "", first_name or "", referred_by),
+    )
+    conn.execute(
+        """UPDATE users SET username=?, first_name=?
+        WHERE user_id=?""",
+        (username or "", first_name or "", user_id),
+    )
     conn.commit()
     conn.close()
 
 
-def dhaka_today():
-    return datetime.now(TIMEZONE).date().isoformat()
-
-
-# ---------------- TELEGRAM WEBAPP SECURITY ----------------
-
-def verify_init_data(init_data):
+def verify_telegram_data(init_data):
     if not BOT_TOKEN or not init_data:
         return None
 
     try:
         parsed = dict(parse_qsl(init_data, keep_blank_values=True))
         received_hash = parsed.pop("hash", None)
-
         if not received_hash:
             return None
 
         data_check_string = "\n".join(
-            f"{key}={value}"
-            for key, value in sorted(parsed.items())
+            f"{key}={value}" for key, value in sorted(parsed.items())
         )
 
         secret_key = hmac.new(
             b"WebAppData",
             BOT_TOKEN.encode(),
-            hashlib.sha256
+            hashlib.sha256,
         ).digest()
 
         calculated_hash = hmac.new(
             secret_key,
             data_check_string.encode(),
-            hashlib.sha256
+            hashlib.sha256,
         ).hexdigest()
 
         if not hmac.compare_digest(calculated_hash, received_hash):
             return None
 
         auth_date = int(parsed.get("auth_date", "0"))
-
-        now = int(datetime.now(timezone.utc).timestamp())
-
-        if now - auth_date > 86400 or auth_date > now + 60:
+        if abs(datetime.now(timezone.utc).timestamp() - auth_date) > 86400:
             return None
 
-        user_data = json.loads(parsed.get("user", "{}"))
-
-        return user_data
+        user = json.loads(parsed.get("user", "{}"))
+        return user if user.get("id") else None
 
     except Exception:
         return None
 
 
-def get_web_user():
-    auth = request.headers.get("Authorization", "")
-
-    if not auth.startswith("tma "):
-        return None
-
-    return verify_init_data(auth[4:])
-
-
-# ---------------- API ----------------
-
-@api.after_request
+@app.after_request
 def add_cors(response):
     origin = request.headers.get("Origin", "")
-
     if origin == WEB_ORIGIN:
         response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Headers"] = (
-            "Authorization, Content-Type"
-        )
-        response.headers["Access-Control-Allow-Methods"] = (
-            "GET, POST, OPTIONS"
-        )
         response.headers["Vary"] = "Origin"
-
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
 
-@api.route("/api/<path:path>", methods=["OPTIONS"])
-def api_options(path):
-    return "", 204
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "database": DB_FILE})
 
 
-@api.route("/api/me", methods=["GET"])
+@app.route("/api/me", methods=["GET", "OPTIONS"])
 def api_me():
-    user = get_web_user()
+    if request.method == "OPTIONS":
+        return "", 204
 
+    user = verify_telegram_data(request.headers.get("X-Telegram-Init-Data", ""))
     if not user:
-        return jsonify({"error": "Unauthorized"}), 401
+        return jsonify({"error": "Telegram verification failed"}), 401
 
-    user_id = int(user["id"])
-    name = user.get("first_name", "")
-
-    ensure_user(user_id, name)
-
-    conn = db()
-
-    row = conn.execute(
-        "SELECT * FROM users WHERE user_id=?",
-        (user_id,)
-    ).fetchone()
-
-    referrals = conn.execute(
-        "SELECT COUNT(*) AS total FROM users WHERE referred_by=?",
-        (user_id,)
-    ).fetchone()["total"]
-
-    conn.close()
-
-    today = dhaka_today()
-    ads_today = row["ads_today"]
-
-    if row["last_ad_date"] != today:
-        ads_today = 0
-
-    referral_link = f"https://t.me/{BOT_USERNAME}?start=ref_{user_id}"
+    add_user(user["id"], user.get("username"), user.get("first_name"))
+    row = get_user(user["id"])
 
     return jsonify({
-        "user_id": user_id,
-        "name": row["name"],
-        "balance": row["balance"],
-        "ads_today": ads_today,
-        "daily_limit": int(get_setting("daily_ad_limit", "20")),
-        "minimum_withdraw": float(
-            get_setting("minimum_withdraw", "50")
-        ),
-        "referrals": referrals,
-        "referral_link": referral_link
+        "user_id": user["id"],
+        "username": user.get("username", ""),
+        "first_name": user.get("first_name", ""),
+        "balance": float(row["balance"]),
+        "min_withdraw": float(setting("min_withdraw", "50")),
+        "daily_limit": int(setting("daily_limit", "20")),
+        "referral_link": f"https://t.me/{BOT_USERNAME}?start={user['id']}",
     })
 
 
-@api.route("/api/withdraw", methods=["POST"])
+@app.route("/api/withdraw", methods=["POST", "OPTIONS"])
 def api_withdraw():
-    user = get_web_user()
+    if request.method == "OPTIONS":
+        return "", 204
 
+    user = verify_telegram_data(request.headers.get("X-Telegram-Init-Data", ""))
     if not user:
-        return jsonify({"error": "Unauthorized"}), 401
+        return jsonify({"error": "Telegram verification failed"}), 401
 
+    data = request.get_json(silent=True) or {}
     try:
-        data = request.get_json(force=True)
-
         amount = float(data.get("amount", 0))
-        method = str(data.get("method", "")).lower().strip()
-        phone = str(data.get("phone", "")).strip()
+    except (TypeError, ValueError):
+        return jsonify({"error": "সঠিক পরিমাণ লিখুন"}), 400
 
-        if method not in ("bkash", "nagad"):
-            return jsonify({"error": "Invalid payment method"}), 400
+    method = str(data.get("method", "")).strip()
+    account = str(data.get("account", "")).strip()
 
-        if not re.fullmatch(r"01[3-9]\d{8}", phone):
-            return jsonify({"error": "Invalid phone number"}), 400
+    if amount < float(setting("min_withdraw", "50")):
+        return jsonify({"error": "ন্যূনতম উত্তোলনের পরিমাণ পূরণ হয়নি"}), 400
 
-        minimum = float(get_setting("minimum_withdraw", "50"))
+    if method not in ("bKash", "Nagad"):
+        return jsonify({"error": "bKash অথবা Nagad নির্বাচন করুন"}), 400
 
-        if amount < minimum:
-            return jsonify({
-                "error": f"Minimum withdrawal is {minimum} taka"
-            }), 400
+    if not re.fullmatch(r"01[3-9]\d{8}", account):
+        return jsonify({"error": "সঠিক মোবাইল নম্বর দিন"}), 400
 
-        if amount <= 0:
-            return jsonify({"error": "Invalid amount"}), 400
-
-        user_id = int(user["id"])
-
-        conn = db()
+    conn = db()
+    try:
         conn.execute("BEGIN IMMEDIATE")
-
         row = conn.execute(
             "SELECT balance FROM users WHERE user_id=?",
-            (user_id,)
+            (user["id"],),
         ).fetchone()
 
-        if not row or row["balance"] < amount:
+        if not row or float(row["balance"]) < amount:
             conn.rollback()
-            conn.close()
-            return jsonify({"error": "Insufficient balance"}), 400
+            return jsonify({"error": "পর্যাপ্ত ব্যালেন্স নেই"}), 400
 
         conn.execute(
             "UPDATE users SET balance=balance-? WHERE user_id=?",
-            (amount, user_id)
+            (amount, user["id"]),
         )
-
-        conn.execute("""
-            INSERT INTO withdrawals
-            (user_id, amount, method, phone)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, amount, method, phone))
-
+        conn.execute(
+            """INSERT INTO withdrawals
+            (user_id, amount, method, account, status)
+            VALUES (?, ?, ?, ?, 'pending')""",
+            (user["id"], amount, method, account),
+        )
         conn.commit()
-        conn.close()
-
-        return jsonify({
-            "success": True,
-            "message": "Withdrawal request submitted"
-        })
 
     except Exception:
-        return jsonify({"error": "Something went wrong"}), 500
+        conn.rollback()
+        return jsonify({"error": "উত্তোলনের অনুরোধ নেওয়া যায়নি"}), 500
+    finally:
+        conn.close()
 
+    return jsonify({"success": True, "message": "উত্তোলনের অনুরোধ জমা হয়েছে"})
 
-# ---------------- TELEGRAM BOT ----------------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    telegram_user = update.effective_user
-
-    if not telegram_user:
+    tg_user = update.effective_user
+    if not tg_user:
         return
 
-    user_id = telegram_user.id
-    name = telegram_user.first_name or ""
-
     referred_by = None
-
     if context.args:
-        argument = context.args[0]
+        try:
+            candidate = int(context.args[0])
+            if candidate != tg_user.id:
+                referred_by = candidate
+        except ValueError:
+            pass
 
-        if argument.startswith("ref_"):
-            try:
-                referred_by = int(argument.replace("ref_", ""))
-            except ValueError:
-                referred_by = None
+    add_user(
+        tg_user.id,
+        tg_user.username,
+        tg_user.first_name,
+        referred_by,
+    )
 
-    ensure_user(user_id, name, referred_by)
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "🚀 Open AdEarn",
-                web_app=WebAppInfo(url=WEB_URL)
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💰 My Balance",
-                callback_data="balance"
-            ),
-            InlineKeyboardButton(
-                "📊 Statistics",
-                callback_data="stats"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "💳 Withdraw",
-                callback_data="withdraw"
-            )
-        ]
-    ]
+    keyboard = [[
+        InlineKeyboardButton(
+            "অ্যাপ খুলুন",
+            web_app=WebAppInfo(url=WEB_URL),
+        )
+    ]]
 
     await update.message.reply_text(
-        f"স্বাগতম {name}!\n\nAdEarn-এ আপনাকে স্বাগতম।",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        "স্বাগতম! বিজ্ঞাপন দেখে আয় করার অ্যাপটি খুলুন।\n\n"
+        "বিজ্ঞাপনের পুরস্কার সার্ভার থেকে যাচাই না হওয়া পর্যন্ত "
+        "ব্যালেন্সে যোগ হবে না।",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
 
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    conn = db()
-    row = conn.execute(
-        "SELECT balance FROM users WHERE user_id=?",
-        (user_id,)
-    ).fetchone()
-    conn.close()
-
-    amount = row["balance"] if row else 0
-
-    await update.message.reply_text(
-        f"আপনার ব্যালেন্স: {amount:.2f} টাকা"
-    )
+    user = get_user(update.effective_user.id)
+    amount = float(user["balance"]) if user else 0
+    await update.message.reply_text(f"আপনার ব্যালেন্স: ৳{amount:.2f}")
 
 
 async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "উইথড্র করতে Mini App খুলুন এবং Withdraw অপশন ব্যবহার করুন।"
+        "উত্তোলনের জন্য Mini App খুলে Withdraw অপশন ব্যবহার করুন।"
     )
 
 
@@ -426,221 +330,183 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
 
+    await update.message.reply_text(
+        "Admin commands:\n"
+        "/stats - মোট ইউজার ও উত্তোলন\n"
+        "/setmin 50 - সর্বনিম্ন উত্তোলন\n"
+        "/setlimit 20 - দৈনিক বিজ্ঞাপন সীমা\n"
+        "/approve ID - উত্তোলন অনুমোদন\n"
+        "/reject ID - উত্তোলন বাতিল\n"
+        "/credit USER_ID AMOUNT - ব্যালেন্স যোগ"
+    )
+
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
     conn = db()
-
-    users = conn.execute(
-        "SELECT COUNT(*) AS total FROM users"
-    ).fetchone()["total"]
-
+    users = conn.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]
     pending = conn.execute(
-        "SELECT COUNT(*) AS total FROM withdrawals WHERE status='pending'"
-    ).fetchone()["total"]
-
+        "SELECT COUNT(*) n FROM withdrawals WHERE status='pending'"
+    ).fetchone()["n"]
     conn.close()
 
     await update.message.reply_text(
-        f"Admin Panel\n\n"
-        f"Total users: {users}\n"
-        f"Pending withdrawals: {pending}\n\n"
-        f"/setmin 50\n"
-        f"/setlimit 20\n"
-        f"/approve ID\n"
-        f"/reject ID"
+        f"মোট ইউজার: {users}\nপেন্ডিং উত্তোলন: {pending}"
     )
 
 
 async def setmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
-
     if not context.args:
         await update.message.reply_text("ব্যবহার: /setmin 50")
         return
-
     try:
         value = float(context.args[0])
-
         if value <= 0:
             raise ValueError
-
-        set_setting("minimum_withdraw", value)
-
-        await update.message.reply_text(
-            f"Minimum withdrawal set to {value} taka"
-        )
-
+        set_setting("min_withdraw", value)
+        await update.message.reply_text(f"সর্বনিম্ন উত্তোলন ৳{value} করা হয়েছে")
     except ValueError:
-        await update.message.reply_text("সঠিক পরিমাণ লিখুন।")
+        await update.message.reply_text("সঠিক পরিমাণ দিন")
 
 
 async def setlimit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
-
     if not context.args:
         await update.message.reply_text("ব্যবহার: /setlimit 20")
         return
-
     try:
         value = int(context.args[0])
-
-        if value < 1:
+        if value <= 0:
             raise ValueError
-
-        set_setting("daily_ad_limit", value)
-
-        await update.message.reply_text(
-            f"Daily limit set to {value}"
-        )
-
+        set_setting("daily_limit", value)
+        await update.message.reply_text(f"দৈনিক সীমা {value} করা হয়েছে")
     except ValueError:
-        await update.message.reply_text("সঠিক সংখ্যা লিখুন।")
+        await update.message.reply_text("সঠিক সংখ্যা দিন")
+
+
+async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    if len(context.args) != 2:
+        await update.message.reply_text("ব্যবহার: /credit USER_ID AMOUNT")
+        return
+
+    try:
+        user_id = int(context.args[0])
+        amount = float(context.args[1])
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text("সঠিক USER_ID ও AMOUNT দিন")
+        return
+
+    conn = db()
+    conn.execute(
+        "UPDATE users SET balance=balance+? WHERE user_id=?",
+        (amount, user_id),
+    )
+    conn.commit()
+    changed = conn.total_changes
+    conn.close()
+
+    await update.message.reply_text(
+        "ব্যালেন্স আপডেট করা হয়েছে।" if changed else "ইউজার পাওয়া যায়নি।"
+    )
 
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
-
     if not context.args:
-        await update.message.reply_text("ব্যবহার: /approve REQUEST_ID")
+        await update.message.reply_text("ব্যবহার: /approve ID")
         return
 
-    try:
-        request_id = int(context.args[0])
+    conn = db()
+    row = conn.execute(
+        "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
+        (context.args[0],),
+    ).fetchone()
 
-        conn = db()
-
-        row = conn.execute(
-            "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
-            (request_id,)
-        ).fetchone()
-
-        if not row:
-            conn.close()
-            await update.message.reply_text("Request পাওয়া যায়নি।")
-            return
-
-        conn.execute(
-            "UPDATE withdrawals SET status='paid' WHERE id=?",
-            (request_id,)
-        )
-
-        conn.commit()
+    if not row:
         conn.close()
+        await update.message.reply_text("পেন্ডিং অনুরোধ পাওয়া যায়নি")
+        return
 
-        await update.message.reply_text(
-            f"Request #{request_id} paid হিসেবে চিহ্নিত হয়েছে।"
-        )
+    conn.execute(
+        "UPDATE withdrawals SET status='paid' WHERE id=?",
+        (row["id"],),
+    )
+    conn.commit()
+    conn.close()
 
-    except ValueError:
-        await update.message.reply_text("সঠিক ID দিন।")
+    await update.message.reply_text(
+        "অনুরোধ Paid হিসেবে চিহ্নিত হয়েছে। টাকা bKash/Nagad-এ "
+        "ম্যানুয়ালি পাঠাতে হবে।"
+    )
 
 
 async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
-
     if not context.args:
-        await update.message.reply_text("ব্যবহার: /reject REQUEST_ID")
+        await update.message.reply_text("ব্যবহার: /reject ID")
         return
 
-    try:
-        request_id = int(context.args[0])
-
-        conn = db()
-
-        row = conn.execute(
-            "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
-            (request_id,)
-        ).fetchone()
-
-        if not row:
-            conn.close()
-            await update.message.reply_text("Request পাওয়া যায়নি।")
-            return
-
-        conn.execute(
-            "UPDATE users SET balance=balance+? WHERE user_id=?",
-            (row["amount"], row["user_id"])
-        )
-
-        conn.execute(
-            "UPDATE withdrawals SET status='rejected' WHERE id=?",
-            (request_id,)
-        )
-
-        conn.commit()
-        conn.close()
-
-        await update.message.reply_text(
-            f"Request #{request_id} rejected এবং টাকা ফেরত দেওয়া হয়েছে।"
-        )
-
-    except ValueError:
-        await update.message.reply_text("সঠিক ID দিন।")
-
-
-async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
     conn = db()
-
-    referrals = conn.execute(
-        "SELECT COUNT(*) AS total FROM users WHERE referred_by=?",
-        (user_id,)
-    ).fetchone()["total"]
-
     row = conn.execute(
-        "SELECT balance FROM users WHERE user_id=?",
-        (user_id,)
+        "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
+        (context.args[0],),
     ).fetchone()
 
+    if not row:
+        conn.close()
+        await update.message.reply_text("পেন্ডিং অনুরোধ পাওয়া যায়নি")
+        return
+
+    conn.execute(
+        "UPDATE withdrawals SET status='rejected' WHERE id=?",
+        (row["id"],),
+    )
+    conn.execute(
+        "UPDATE users SET balance=balance+? WHERE user_id=?",
+        (row["amount"], row["user_id"]),
+    )
+    conn.commit()
     conn.close()
 
-    amount = row["balance"] if row else 0
-
     await update.message.reply_text(
-        f"আপনার Statistics\n\n"
-        f"Referrals: {referrals}\n"
-        f"Balance: {amount:.2f} টাকা"
+        "উত্তোলন বাতিল হয়েছে এবং ব্যালেন্স ফেরত দেওয়া হয়েছে।"
     )
 
 
-# ---------------- START SERVER ----------------
-
-def run_api():
-    api.run(
-        host="0.0.0.0",
-        port=PORT,
-        debug=False,
-        use_reloader=False
-    )
+def run_web():
+    app.run(host="0.0.0.0", port=PORT, use_reloader=False)
 
 
 def main():
+    init_db()
+
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN environment variable missing")
+        raise RuntimeError("BOT_TOKEN environment variable is missing")
 
-    setup_database()
-
-    threading.Thread(
-        target=run_api,
-        daemon=True
-    ).start()
+    threading.Thread(target=run_web, daemon=True).start()
 
     application = Application.builder().token(BOT_TOKEN).build()
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(CommandHandler("withdraw", withdraw))
     application.add_handler(CommandHandler("admin", admin))
+    application.add_handler(CommandHandler("stats", stats))
     application.add_handler(CommandHandler("setmin", setmin))
     application.add_handler(CommandHandler("setlimit", setlimit))
+    application.add_handler(CommandHandler("credit", credit))
     application.add_handler(CommandHandler("approve", approve))
     application.add_handler(CommandHandler("reject", reject))
-    application.add_handler(CommandHandler("stats", stats))
-
-    print("AdEarn bot is starting...")
 
     application.run_polling()
 
