@@ -6,7 +6,7 @@
 <title>AdEarn</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://monetag.com/telegram/3561815/"></script>
+<script src="//libtl.com/sdk.js" data-zone="12185380" data-sdk="show_12185380"></script>
 
 <style>
 *{box-sizing:border-box}
@@ -86,44 +86,30 @@ input,select{
 </div>
 
 <div id="ads" class="section card">
- <button class="back" onclick="showSection('home')">
-  ← ফিরে যাও
- </button>
+ <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
  <h3>📺 বিজ্ঞাপন দেখো</h3>
- <p class="muted">
-  প্রতি সফল বিজ্ঞাপনে ৳১০ পুরস্কার।
- </p>
- <button id="watchButton" class="primary" onclick="watchAd()">
-  বিজ্ঞাপন দেখুন
- </button>
+ <p class="muted">প্রতি সফল বিজ্ঞাপনে ৳১০ পুরস্কার।</p>
+ <button id="watchButton" class="primary" onclick="watchAd()">বিজ্ঞাপন দেখুন</button>
  <p id="adMessage"></p>
 </div>
 
 <div id="balancePage" class="section card">
- <button class="back" onclick="showSection('home')">
-  ← ফিরে যাও
- </button>
+ <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
  <h3>💰 My Balance</h3>
  <div class="balance" id="balance2">৳0.00</div>
  <p class="muted">তোমার বর্তমান ব্যালেন্স।</p>
 </div>
 
 <div id="referral" class="section card">
- <button class="back" onclick="showSection('home')">
-  ← ফিরে যাও
- </button>
+ <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
  <h3>👥 Refer &amp; Earn</h3>
  <p class="muted">তোমার রেফারেল লিংক</p>
  <input id="refLink" readonly placeholder="রেফারেল লিংক">
- <button class="primary" onclick="copyReferral()">
-  লিংক কপি
- </button>
+ <button class="primary" onclick="copyReferral()">লিংক কপি</button>
 </div>
 
 <div id="withdraw" class="section card">
- <button class="back" onclick="showSection('home')">
-  ← ফিরে যাও
- </button>
+ <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
  <h3>💳 টাকা উত্তোলন</h3>
 
  <label>পেমেন্ট মাধ্যম</label>
@@ -138,17 +124,12 @@ input,select{
  <label>টাকার পরিমাণ</label>
  <input id="amount" type="number" placeholder="যেমন: 100" min="1">
 
- <button class="primary" onclick="submitWithdraw()">
-  উত্তোলনের আবেদন
- </button>
-
+ <button class="primary" onclick="submitWithdraw()">উত্তোলনের আবেদন</button>
  <p id="withdrawMessage"></p>
 </div>
 
 <div id="statistics" class="section card">
- <button class="back" onclick="showSection('home')">
-  ← ফিরে যাও
- </button>
+ <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
  <h3>📊 Statistics</h3>
  <p>আজ সফল বিজ্ঞাপন: <b id="adsWatched">0</b></p>
  <p>রেফারেল: <b id="referrals">0</b></p>
@@ -156,9 +137,7 @@ input,select{
 </div>
 
 <div id="profile" class="section card">
- <button class="back" onclick="showSection('home')">
-  ← ফিরে যাও
- </button>
+ <button class="back" onclick="showSection('home')">← ফিরে যাও</button>
  <h3>👤 My Profile</h3>
  <p id="profileName">Telegram account</p>
  <p class="muted">AdEarn Member</p>
@@ -193,9 +172,7 @@ function showSection(id){
  document.querySelectorAll(".section").forEach(s =>
   s.classList.remove("active")
  );
-
  document.getElementById(id).classList.add("active");
-
  loadAccount();
 }
 
@@ -233,27 +210,14 @@ async function api(path, body){
 async function loadAccount(){
  try{
   const data = await api("/api/me");
-
   const amount = Number(data.balance || 0).toFixed(2);
 
-  document.getElementById("balance").textContent =
-   "৳" + amount;
-
-  document.getElementById("balance2").textContent =
-   "৳" + amount;
-
-  document.getElementById("adsWatched").textContent =
-   data.ads_today || 0;
-
-  document.getElementById("referrals").textContent =
-   data.referrals || 0;
-
-  document.getElementById("dailyLimit").textContent =
-   data.daily_limit || 0;
-
-  document.getElementById("refLink").value =
-   data.referral_link || "";
-
+  document.getElementById("balance").textContent = "৳" + amount;
+  document.getElementById("balance2").textContent = "৳" + amount;
+  document.getElementById("adsWatched").textContent = data.ads_today || 0;
+  document.getElementById("referrals").textContent = data.referrals || 0;
+  document.getElementById("dailyLimit").textContent = data.daily_limit || 0;
+  document.getElementById("refLink").value = data.referral_link || "";
   document.getElementById("message").textContent = "";
 
  }catch(e){
@@ -273,13 +237,15 @@ async function watchAd(){
 
  try{
   if(typeof window.show_12185380 !== "function"){
-   throw new Error("বিজ্ঞাপন এখন পাওয়া যাচ্ছে না।");
+   throw new Error("Monetag SDK লোড হয়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করো।");
   }
 
-  // সার্ভার থেকে ইউনিক বিজ্ঞাপন সেশন নেওয়া
   const session = await api("/api/ad/start");
 
-  // Monetag-এ ইউনিক ymid পাঠানো
+  if(!session.ymid){
+   throw new Error("বিজ্ঞাপন সেশন তৈরি হয়নি। আবার চেষ্টা করো।");
+  }
+
   await window.show_12185380({
    ymid: session.ymid,
    requestVar: "watch_ads"
@@ -288,14 +254,12 @@ async function watchAd(){
   msg.textContent =
    "বিজ্ঞাপন শেষ হয়েছে। সার্ভার যাচাই করলে পুরস্কার যোগ হবে।";
 
-  // সার্ভারের ব্যালেন্স আপডেট দেখার জন্য
   setTimeout(loadAccount, 3000);
   setTimeout(loadAccount, 8000);
   setTimeout(loadAccount, 15000);
 
  }catch(e){
-  msg.textContent =
-   e.message || "বিজ্ঞাপন চালু করা যায়নি।";
+  msg.textContent = e.message || "বিজ্ঞাপন চালু করা যায়নি।";
 
  }finally{
   adRunning = false;
@@ -305,14 +269,12 @@ async function watchAd(){
 
 async function submitWithdraw(){
  const msg = document.getElementById("withdrawMessage");
-
  const method = document.getElementById("method").value;
  const phone = document.getElementById("phone").value.trim();
  const amount = Number(document.getElementById("amount").value);
 
  if(!/^01[3-9]\d{8}$/.test(phone)){
-  msg.textContent =
-   "সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দাও।";
+  msg.textContent = "সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দাও।";
   return;
  }
 
@@ -329,10 +291,8 @@ async function submitWithdraw(){
   });
 
   msg.textContent = result.message || "আবেদন জমা হয়েছে।";
-
   document.getElementById("amount").value = "";
   document.getElementById("phone").value = "";
-
   await loadAccount();
 
  }catch(e){
@@ -359,7 +319,6 @@ function copyReferral(){
 
 function fallbackCopy(link){
  const input = document.getElementById("refLink");
-
  input.value = link;
  input.select();
 
@@ -372,8 +331,6 @@ function fallbackCopy(link){
 }
 
 loadAccount();
-
-// কিছুক্ষণ পরপর ব্যালেন্স আপডেট
 setInterval(loadAccount, 20000);
 </script>
 
