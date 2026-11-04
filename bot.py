@@ -31,7 +31,6 @@ WEB_ORIGIN = "https://mdmahdihasanm4-blip.github.io"
 PORT = int(os.getenv("PORT", "8080"))
 TIMEZONE = ZoneInfo("Asia/Dhaka")
 
-# পুরোনো ডেটাবেস থাকলে সেটিই ব্যবহার হবে।
 DB_FILE = "bot.db" if os.path.exists("bot.db") else "adearn.db"
 
 app = Flask(__name__)
@@ -59,6 +58,26 @@ def init_db():
             joined_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """)
+
+        # পুরোনো ডেটাবেসের কলাম পরীক্ষা ও প্রয়োজনীয় কলাম যোগ
+        columns = {
+            row["name"]
+            for row in cur.execute("PRAGMA table_info(users)").fetchall()
+        }
+
+        required_columns = {
+            "username": "TEXT DEFAULT ''",
+            "first_name": "TEXT DEFAULT ''",
+            "balance": "REAL DEFAULT 0",
+            "referred_by": "INTEGER DEFAULT NULL",
+            "joined_at": "TEXT DEFAULT CURRENT_TIMESTAMP",
+        }
+
+        for column, definition in required_columns.items():
+            if column not in columns:
+                cur.execute(
+                    f"ALTER TABLE users ADD COLUMN {column} {definition}"
+                )
 
         cur.execute("""
         CREATE TABLE IF NOT EXISTS withdrawals (
@@ -323,10 +342,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args:
         try:
             candidate = int(context.args[0])
-
             if candidate != tg_user.id:
                 referred_by = candidate
-
         except ValueError:
             pass
 
@@ -387,7 +404,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     conn = db()
-
     users = conn.execute(
         "SELECT COUNT(*) n FROM users"
     ).fetchone()["n"]
@@ -413,12 +429,10 @@ async def setmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         value = float(context.args[0])
-
         if value <= 0:
             raise ValueError
 
         set_setting("min_withdraw", value)
-
         await update.message.reply_text(
             f"সর্বনিম্ন উত্তোলন ৳{value} করা হয়েছে"
         )
@@ -437,12 +451,10 @@ async def setlimit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         value = int(context.args[0])
-
         if value <= 0:
             raise ValueError
 
         set_setting("daily_limit", value)
-
         await update.message.reply_text(
             f"দৈনিক সীমা {value} করা হয়েছে"
         )
@@ -464,7 +476,6 @@ async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = int(context.args[0])
         amount = float(context.args[1])
-
         if amount <= 0:
             raise ValueError
 
@@ -475,12 +486,10 @@ async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     conn = db()
-
     conn.execute(
         "UPDATE users SET balance=balance+? WHERE user_id=?",
         (amount, user_id),
     )
-
     conn.commit()
     changed = conn.total_changes
     conn.close()
@@ -501,7 +510,6 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     conn = db()
-
     row = conn.execute(
         "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
         (context.args[0],),
@@ -516,7 +524,6 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "UPDATE withdrawals SET status='paid' WHERE id=?",
         (row["id"],),
     )
-
     conn.commit()
     conn.close()
 
@@ -535,7 +542,6 @@ async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     conn = db()
-
     row = conn.execute(
         "SELECT * FROM withdrawals WHERE id=? AND status='pending'",
         (context.args[0],),
@@ -572,7 +578,6 @@ def run_web():
     )
 
 
-# গুরুত্বপূর্ণ: Polling চালুর আগে পুরোনো Webhook সরানো হবে।
 async def post_init(application):
     await application.bot.delete_webhook(
         drop_pending_updates=False
@@ -587,13 +592,11 @@ def main():
             "BOT_TOKEN environment variable is missing"
         )
 
-    # ওয়েব সার্ভার চালু
     threading.Thread(
         target=run_web,
         daemon=True,
     ).start()
 
-    # Telegram bot চালু
     application = (
         Application.builder()
         .token(BOT_TOKEN)
