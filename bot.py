@@ -242,6 +242,42 @@ def api_withdraw():
     finally: conn.close()
     return jsonify({"success":True,"message":"উত্তোলনের অনুরোধ জমা হয়েছে"})
 
+@app.route("/api/withdrawals", methods=["GET", "OPTIONS"])
+def api_withdrawals():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
+    if not user:
+        return jsonify({"error": "Telegram verification failed"}), 401
+
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 50))
+    except (TypeError, ValueError):
+        return jsonify({"error": "ভুল limit"}), 400
+
+    conn = db()
+
+    try:
+        rows = conn.execute(
+            """SELECT id, amount, method, account, status, created_at
+            FROM withdrawals
+            WHERE user_id=?
+            ORDER BY id DESC
+            LIMIT ?""",
+            (user["id"], limit)
+        ).fetchall()
+
+        return jsonify({
+            "items": [dict(row) for row in rows]
+        })
+
+    finally:
+        conn.close()
+        
 # ---------------- ADMIN WEB API ----------------
 def verified_admin():
     user=verify_telegram_data(request.headers.get("X-Telegram-Init-Data",""))
