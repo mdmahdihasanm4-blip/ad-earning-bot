@@ -1,7 +1,17 @@
-import os, re, json, hmac, secrets, hashlib, sqlite3, threading
+
+import os
+import re
+import json
+import hmac
+import secrets
+import hashlib
+import sqlite3
+import threading
+
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
+
 from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -16,8 +26,10 @@ POSTBACK_SECRET = os.getenv("POSTBACK_SECRET", "")
 DB_FILE = "bot.db" if os.path.exists("bot.db") else "adearn.db"
 MONETAG_ZONE_ID = "12185380"
 TIMEZONE = ZoneInfo("Asia/Dhaka")
+
 app = Flask(__name__)
 db_lock = threading.RLock()
+
 
 def db():
     conn = sqlite3.connect(DB_FILE, timeout=30)
@@ -25,222 +37,516 @@ def db():
     conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
+
 def get_columns(cur, table):
-    return {row["name"] for row in cur.execute(f"PRAGMA table_info({table})").fetchall()}
+    return {
+        row["name"]
+        for row in cur.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+
 
 def add_missing_columns(cur, table, definitions):
     existing = get_columns(cur, table)
     for column, definition in definitions.items():
         if column not in existing:
-            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            cur.execute(
+                f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+            )
+
 
 def init_db():
     with db_lock:
         conn = db()
         cur = conn.cursor()
+
         cur.execute("""CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY, username TEXT DEFAULT '', first_name TEXT DEFAULT '',
-            balance REAL DEFAULT 0, referred_by INTEGER DEFAULT NULL, joined_at TEXT DEFAULT '')""")
-        add_missing_columns(cur, "users", {"username":"TEXT DEFAULT ''","first_name":"TEXT DEFAULT ''",
-            "balance":"REAL DEFAULT 0","referred_by":"INTEGER DEFAULT NULL","joined_at":"TEXT DEFAULT ''"})
-        cur.execute("UPDATE users SET joined_at=CURRENT_TIMESTAMP WHERE joined_at IS NULL OR joined_at=''")
+            user_id INTEGER PRIMARY KEY,
+            username TEXT DEFAULT '',
+            first_name TEXT DEFAULT '',
+            balance REAL DEFAULT 0,
+            referred_by INTEGER DEFAULT NULL,
+            joined_at TEXT DEFAULT ''
+        )""")
+
+        add_missing_columns(cur, "users", {
+            "username": "TEXT DEFAULT ''",
+            "first_name": "TEXT DEFAULT ''",
+            "balance": "REAL DEFAULT 0",
+            "referred_by": "INTEGER DEFAULT NULL",
+            "joined_at": "TEXT DEFAULT ''"
+        })
+
+        cur.execute("""
+            UPDATE users SET joined_at=CURRENT_TIMESTAMP
+            WHERE joined_at IS NULL OR joined_at=''
+        """)
+
         cur.execute("""CREATE TABLE IF NOT EXISTS withdrawals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, amount REAL NOT NULL,
-            method TEXT NOT NULL, account TEXT NOT NULL, status TEXT DEFAULT 'pending',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
-        add_missing_columns(cur, "withdrawals", {"user_id":"INTEGER","amount":"REAL DEFAULT 0",
-            "method":"TEXT DEFAULT ''","account":"TEXT DEFAULT ''","status":"TEXT DEFAULT 'pending'",
-            "created_at":"TEXT DEFAULT ''"})
-        cur.execute("UPDATE withdrawals SET created_at=CURRENT_TIMESTAMP WHERE created_at IS NULL OR created_at=''")
-        cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
-        for key, value in {"min_withdraw":"50","daily_limit":"20","reward_amount":"10"}.items():
-            cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (key,value))
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            method TEXT NOT NULL,
+            account TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )""")
+
+        add_missing_columns(cur, "withdrawals", {
+            "user_id": "INTEGER",
+            "amount": "REAL DEFAULT 0",
+            "method": "TEXT DEFAULT ''",
+            "account": "TEXT DEFAULT ''",
+            "status": "TEXT DEFAULT 'pending'",
+            "created_at": "TEXT DEFAULT ''"
+        })
+
+        cur.execute("""
+            UPDATE withdrawals SET created_at=CURRENT_TIMESTAMP
+            WHERE created_at IS NULL OR created_at=''
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        """)
+
+        defaults = {
+            "min_withdraw": "50",
+            "daily_limit": "20",
+            "reward_amount": "10",
+            "design_config": "{}"
+        }
+
+        for key, value in defaults.items():
+            cur.execute(
+                "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)",
+                (key, value)
+            )
+
         cur.execute("""CREATE TABLE IF NOT EXISTS ad_sessions (
-            ymid TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created_at TEXT NOT NULL,
-            rewarded_at TEXT DEFAULT NULL)""")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_ad_sessions_user ON ad_sessions(user_id, created_at)")
+            ymid TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            rewarded_at TEXT DEFAULT NULL
+        )""")
+
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_ad_sessions_user
+            ON ad_sessions(user_id, created_at)
+        """)
+
         conn.commit()
         conn.close()
 
+
 def setting(key, default):
-    conn=db()
-    row=conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    conn = db()
+    row = conn.execute(
+        "SELECT value FROM settings WHERE key=?", (key,)
+    ).fetchone()
     conn.close()
     return row["value"] if row else default
 
+
 def set_setting(key, value):
-    conn=db()
-    conn.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (key,str(value)))
-    conn.commit(); conn.close()
+    conn = db()
+    conn.execute(
+        "INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)",
+        (key, str(value))
+    )
+    conn.commit()
+    conn.close()
+
 
 def get_user(user_id):
-    conn=db()
-    row=conn.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
+    conn = db()
+    row = conn.execute(
+        "SELECT * FROM users WHERE user_id=?", (user_id,)
+    ).fetchone()
     conn.close()
     return row
 
+
 def add_user(user_id, username="", first_name="", referred_by=None):
-    conn=db()
-    conn.execute("""INSERT OR IGNORE INTO users
+    conn = db()
+    conn.execute("""
+        INSERT OR IGNORE INTO users
         (user_id,username,first_name,referred_by,joined_at)
-        VALUES(?,?,?,?,CURRENT_TIMESTAMP)""", (user_id,username or "",first_name or "",referred_by))
-    conn.execute("UPDATE users SET username=?,first_name=? WHERE user_id=?",
-                 (username or "",first_name or "",user_id))
-    conn.commit(); conn.close()
+        VALUES(?,?,?,?,CURRENT_TIMESTAMP)
+    """, (user_id, username or "", first_name or "", referred_by))
+
+    conn.execute("""
+        UPDATE users SET username=?,first_name=? WHERE user_id=?
+    """, (username or "", first_name or "", user_id))
+
+    conn.commit()
+    conn.close()
+
 
 def today_text():
     return datetime.now(TIMEZONE).date().isoformat()
 
+
 def verify_telegram_data(init_data):
-    if not BOT_TOKEN or not init_data: return None
+    if not BOT_TOKEN or not init_data:
+        return None
+
     try:
-        parsed=dict(parse_qsl(init_data,keep_blank_values=True))
-        received_hash=parsed.pop("hash",None)
-        if not received_hash: return None
-        check_string="\n".join(f"{k}={v}" for k,v in sorted(parsed.items()))
-        secret_key=hmac.new(b"WebAppData",BOT_TOKEN.encode(),hashlib.sha256).digest()
-        calculated=hmac.new(secret_key,check_string.encode(),hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(calculated,received_hash): return None
-        auth_date=int(parsed.get("auth_date","0"))
-        now=datetime.now(timezone.utc).timestamp()
-        if auth_date<=0 or now-auth_date>86400 or auth_date-now>60: return None
-        user=json.loads(parsed.get("user","{}"))
+        parsed = dict(parse_qsl(init_data, keep_blank_values=True))
+        received_hash = parsed.pop("hash", None)
+
+        if not received_hash:
+            return None
+
+        check_string = "\n".join(
+            f"{k}={v}" for k, v in sorted(parsed.items())
+        )
+
+        secret_key = hmac.new(
+            b"WebAppData",
+            BOT_TOKEN.encode(),
+            hashlib.sha256
+        ).digest()
+
+        calculated = hmac.new(
+            secret_key,
+            check_string.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(calculated, received_hash):
+            return None
+
+        auth_date = int(parsed.get("auth_date", "0"))
+        now = datetime.now(timezone.utc).timestamp()
+
+        if auth_date <= 0 or now - auth_date > 86400 or auth_date - now > 60:
+            return None
+
+        user = json.loads(parsed.get("user", "{}"))
         return user if user.get("id") else None
+
     except Exception:
         return None
 
+
 @app.after_request
 def add_cors(response):
-    origin=request.headers.get("Origin","")
-    if origin==WEB_ORIGIN:
-        response.headers["Access-Control-Allow-Origin"]=origin
-        response.headers["Vary"]="Origin"
-        response.headers["Access-Control-Allow-Headers"]="Content-Type, X-Telegram-Init-Data"
-        response.headers["Access-Control-Allow-Methods"]="GET, POST, OPTIONS"
+    origin = request.headers.get("Origin", "")
+
+    if origin == WEB_ORIGIN:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Headers"] = (
+            "Content-Type, X-Telegram-Init-Data"
+        )
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+
     return response
+
 
 @app.route("/health")
 def health():
     try:
-        conn=db(); conn.execute("SELECT 1").fetchone(); conn.close()
-        return jsonify({"status":"ok","database":DB_FILE})
+        conn = db()
+        conn.execute("SELECT 1").fetchone()
+        conn.close()
+        return jsonify({"status": "ok", "database": DB_FILE})
     except Exception:
         app.logger.exception("Health check failed")
-        return jsonify({"status":"error"}),500
+        return jsonify({"status": "error"}), 500
 
-@app.route("/api/me",methods=["GET","OPTIONS"])
+
+@app.route("/api/me", methods=["GET", "OPTIONS"])
 def api_me():
-    if request.method=="OPTIONS": return "",204
-    user=verify_telegram_data(request.headers.get("X-Telegram-Init-Data",""))
-    if not user: return jsonify({"error":"Telegram verification failed"}),401
-    add_user(user["id"],user.get("username"),user.get("first_name"))
-    row=get_user(user["id"]); today=today_text(); conn=db()
-    ads_today=conn.execute("SELECT COUNT(*) n FROM ad_sessions WHERE user_id=? AND rewarded_at LIKE ?",
-                           (user["id"],today+"%")).fetchone()["n"]
-    referrals=conn.execute("SELECT COUNT(*) n FROM users WHERE referred_by=?",(user["id"],)).fetchone()["n"]
+    if request.method == "OPTIONS":
+        return "", 204
+
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
+    if not user:
+        return jsonify({"error": "Telegram verification failed"}), 401
+
+    add_user(user["id"], user.get("username"), user.get("first_name"))
+
+    row = get_user(user["id"])
+    today = today_text()
+    conn = db()
+
+    ads_today = conn.execute("""
+        SELECT COUNT(*) n FROM ad_sessions
+        WHERE user_id=? AND rewarded_at LIKE ?
+    """, (user["id"], today + "%")).fetchone()["n"]
+
+    referrals = conn.execute("""
+        SELECT COUNT(*) n FROM users WHERE referred_by=?
+    """, (user["id"],)).fetchone()["n"]
+
     conn.close()
-    return jsonify({"user_id":user["id"],"username":user.get("username",""),
-        "first_name":user.get("first_name",""),"balance":float(row["balance"] or 0),
-        "min_withdraw":float(setting("min_withdraw","50")),"daily_limit":int(setting("daily_limit","20")),
-        "reward_amount":float(setting("reward_amount","10")),"ads_today":ads_today,"referrals":referrals,
-        "referral_link":f"https://t.me/{BOT_USERNAME}?start={user['id']}"})
 
-@app.route("/api/ad/start",methods=["POST","OPTIONS"])
+    return jsonify({
+        "user_id": user["id"],
+        "username": user.get("username", ""),
+        "first_name": user.get("first_name", ""),
+        "balance": float(row["balance"] or 0),
+        "min_withdraw": float(setting("min_withdraw", "50")),
+        "daily_limit": int(setting("daily_limit", "20")),
+        "reward_amount": float(setting("reward_amount", "10")),
+        "ads_today": ads_today,
+        "referrals": referrals,
+        "referral_link": f"https://t.me/{BOT_USERNAME}?start={user['id']}"
+    })
+
+
+@app.route("/api/ad/start", methods=["POST", "OPTIONS"])
 def api_ad_start():
-    if request.method=="OPTIONS": return "",204
-    user=verify_telegram_data(request.headers.get("X-Telegram-Init-Data",""))
-    if not user: return jsonify({"error":"Telegram verification failed"}),401
-    add_user(user["id"],user.get("username"),user.get("first_name"))
-    today=today_text(); limit=int(setting("daily_limit","20")); conn=db()
+    if request.method == "OPTIONS":
+        return "", 204
+
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
+    if not user:
+        return jsonify({"error": "Telegram verification failed"}), 401
+
+    add_user(user["id"], user.get("username"), user.get("first_name"))
+
+    today = today_text()
+    limit = int(setting("daily_limit", "20"))
+    conn = db()
+
     try:
         conn.execute("BEGIN IMMEDIATE")
-        rewarded=conn.execute("SELECT COUNT(*) n FROM ad_sessions WHERE user_id=? AND rewarded_at LIKE ?",
-                              (user["id"],today+"%")).fetchone()["n"]
-        if rewarded>=limit:
-            conn.rollback(); return jsonify({"error":"আজকের বিজ্ঞাপনের সীমা শেষ"}),400
-        active=conn.execute("""SELECT COUNT(*) n FROM ad_sessions WHERE user_id=?
-            AND rewarded_at IS NULL AND created_at>=?""",
-            (user["id"],(datetime.now(TIMEZONE)-timedelta(minutes=30)).isoformat())).fetchone()["n"]
-        if active>=3:
-            conn.rollback(); return jsonify({"error":"আগের বিজ্ঞাপন যাচাই হওয়ার জন্য অপেক্ষা করো"}),429
-        ymid=secrets.token_hex(16); created=datetime.now(TIMEZONE).isoformat()
-        conn.execute("INSERT INTO ad_sessions(ymid,user_id,created_at) VALUES(?,?,?)",(ymid,user["id"],created))
-        conn.commit(); return jsonify({"ymid":ymid})
-    except Exception:
-        conn.rollback(); app.logger.exception("Ad session creation failed")
-        return jsonify({"error":"বিজ্ঞাপন চালু করা যায়নি"}),500
-    finally: conn.close()
 
-@app.route("/postback",methods=["GET"])
+        rewarded = conn.execute("""
+            SELECT COUNT(*) n FROM ad_sessions
+            WHERE user_id=? AND rewarded_at LIKE ?
+        """, (user["id"], today + "%")).fetchone()["n"]
+
+        if rewarded >= limit:
+            conn.rollback()
+            return jsonify({"error": "আজকের বিজ্ঞাপনের সীমা শেষ"}), 400
+
+        active = conn.execute("""
+            SELECT COUNT(*) n FROM ad_sessions
+            WHERE user_id=? AND rewarded_at IS NULL AND created_at>=?
+        """, (
+            user["id"],
+            (datetime.now(TIMEZONE) - timedelta(minutes=30)).isoformat()
+        )).fetchone()["n"]
+
+        if active >= 3:
+            conn.rollback()
+            return jsonify({
+                "error": "আগের বিজ্ঞাপন যাচাই হওয়ার জন্য অপেক্ষা করো"
+            }), 429
+
+        ymid = secrets.token_hex(16)
+        created = datetime.now(TIMEZONE).isoformat()
+
+        conn.execute("""
+            INSERT INTO ad_sessions(ymid,user_id,created_at)
+            VALUES(?,?,?)
+        """, (ymid, user["id"], created))
+
+        conn.commit()
+        return jsonify({"ymid": ymid})
+
+    except Exception:
+        conn.rollback()
+        app.logger.exception("Ad session creation failed")
+        return jsonify({"error": "বিজ্ঞাপন চালু করা যায়নি"}), 500
+
+    finally:
+        conn.close()
+
+
+@app.route("/postback", methods=["GET"])
 def monetag_postback():
-    if not POSTBACK_SECRET: return "Server secret missing",500
-    supplied=request.args.get("secret","")
-    if not hmac.compare_digest(POSTBACK_SECRET,supplied): return "Unauthorized",401
-    if request.args.get("zone_id")!=MONETAG_ZONE_ID: return "Ignored zone",200
-    if request.args.get("reward_event_type")!="valued": return "Non-valued event",200
-    event_type=request.args.get("event_type","")
-    if event_type not in ("impression","click"): return "Ignored event",200
-    ymid=request.args.get("ymid","").strip()
-    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}",ymid): return "Invalid ymid",400
-    telegram_id=request.args.get("telegram_id","").strip(); conn=db()
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        session=conn.execute("SELECT user_id,created_at,rewarded_at FROM ad_sessions WHERE ymid=?",(ymid,)).fetchone()
-        if not session: conn.rollback(); return "Unknown session",200
-        if telegram_id and telegram_id!=str(session["user_id"]): conn.rollback(); return "User mismatch",200
-        if session["rewarded_at"]: conn.rollback(); return "Already rewarded",200
-        try:
-            created=datetime.fromisoformat(session["created_at"])
-            if created.tzinfo is None: created=created.replace(tzinfo=TIMEZONE)
-            if datetime.now(TIMEZONE)-created>timedelta(hours=24):
-                conn.rollback(); return "Session expired",200
-        except Exception:
-            conn.rollback(); return "Invalid session time",200
-        today=today_text()
-        count=conn.execute("SELECT COUNT(*) n FROM ad_sessions WHERE user_id=? AND rewarded_at LIKE ?",
-                           (session["user_id"],today+"%")).fetchone()["n"]
-        if count>=int(setting("daily_limit","20")): conn.rollback(); return "Daily limit reached",200
-        reward=float(setting("reward_amount","10"))
-        if reward<=0: conn.rollback(); return "Invalid reward setting",500
-        rewarded_at=datetime.now(TIMEZONE).isoformat()
-        conn.execute("UPDATE ad_sessions SET rewarded_at=? WHERE ymid=? AND rewarded_at IS NULL",(rewarded_at,ymid))
-        conn.execute("UPDATE users SET balance=balance+? WHERE user_id=?",(reward,session["user_id"]))
-        conn.commit()
-        app.logger.info("Reward credited: user=%s amount=%s ymid=%s",session["user_id"],reward,ymid)
-        return "OK",200
-    except Exception:
-        conn.rollback(); app.logger.exception("Monetag postback failed"); return "Server error",500
-    finally: conn.close()
+    if not POSTBACK_SECRET:
+        return "Server secret missing", 500
 
-@app.route("/api/withdraw",methods=["POST","OPTIONS"])
-def api_withdraw():
-    if request.method=="OPTIONS": return "",204
-    user=verify_telegram_data(request.headers.get("X-Telegram-Init-Data",""))
-    if not user: return jsonify({"error":"Telegram verification failed"}),401
-    data=request.get_json(silent=True) or {}
-    try: amount=round(float(data.get("amount",0)),2)
-    except (TypeError,ValueError): return jsonify({"error":"সঠিক পরিমাণ লিখুন"}),400
-    method=str(data.get("method","")).strip(); account=str(data.get("account","")).strip()
-    if amount<=0: return jsonify({"error":"সঠিক পরিমাণ লিখুন"}),400
-    if amount<float(setting("min_withdraw","50")):
-        return jsonify({"error":"ন্যূনতম উত্তোলনের পরিমাণ পূরণ হয়নি"}),400
-    if method not in ("bKash","Nagad"): return jsonify({"error":"bKash অথবা Nagad নির্বাচন করুন"}),400
-    if not re.fullmatch(r"01[3-9]\d{8}",account): return jsonify({"error":"সঠিক মোবাইল নম্বর দিন"}),400
-    conn=db()
+    supplied = request.args.get("secret", "")
+
+    if not hmac.compare_digest(POSTBACK_SECRET, supplied):
+        return "Unauthorized", 401
+
+    if request.args.get("zone_id") != MONETAG_ZONE_ID:
+        return "Ignored zone", 200
+
+    if request.args.get("reward_event_type") != "valued":
+        return "Non-valued event", 200
+
+    event_type = request.args.get("event_type", "")
+
+    if event_type not in ("impression", "click"):
+        return "Ignored event", 200
+
+    ymid = request.args.get("ymid", "").strip()
+
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", ymid):
+        return "Invalid ymid", 400
+
+    telegram_id = request.args.get("telegram_id", "").strip()
+    conn = db()
+
     try:
         conn.execute("BEGIN IMMEDIATE")
-        row=conn.execute("SELECT balance FROM users WHERE user_id=?",(user["id"],)).fetchone()
-        if not row or float(row["balance"] or 0)<amount:
-            conn.rollback(); return jsonify({"error":"পর্যাপ্ত ব্যালেন্স নেই"}),400
-        conn.execute("UPDATE users SET balance=balance-? WHERE user_id=?",(amount,user["id"]))
-        conn.execute("INSERT INTO withdrawals(user_id,amount,method,account,status) VALUES(?,?,?,?,'pending')",
-                     (user["id"],amount,method,account))
+
+        session = conn.execute("""
+            SELECT user_id,created_at,rewarded_at
+            FROM ad_sessions WHERE ymid=?
+        """, (ymid,)).fetchone()
+
+        if not session:
+            conn.rollback()
+            return "Unknown session", 200
+
+        if telegram_id and telegram_id != str(session["user_id"]):
+            conn.rollback()
+            return "User mismatch", 200
+
+        if session["rewarded_at"]:
+            conn.rollback()
+            return "Already rewarded", 200
+
+        try:
+            created = datetime.fromisoformat(session["created_at"])
+
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=TIMEZONE)
+
+            if datetime.now(TIMEZONE) - created > timedelta(hours=24):
+                conn.rollback()
+                return "Session expired", 200
+
+        except Exception:
+            conn.rollback()
+            return "Invalid session time", 200
+
+        today = today_text()
+
+        count = conn.execute("""
+            SELECT COUNT(*) n FROM ad_sessions
+            WHERE user_id=? AND rewarded_at LIKE ?
+        """, (session["user_id"], today + "%")).fetchone()["n"]
+
+        if count >= int(setting("daily_limit", "20")):
+            conn.rollback()
+            return "Daily limit reached", 200
+
+        reward = float(setting("reward_amount", "10"))
+
+        if reward <= 0:
+            conn.rollback()
+            return "Invalid reward setting", 500
+
+        rewarded_at = datetime.now(TIMEZONE).isoformat()
+
+        conn.execute("""
+            UPDATE ad_sessions SET rewarded_at=?
+            WHERE ymid=? AND rewarded_at IS NULL
+        """, (rewarded_at, ymid))
+
+        conn.execute("""
+            UPDATE users SET balance=balance+? WHERE user_id=?
+        """, (reward, session["user_id"]))
+
         conn.commit()
+
+        app.logger.info(
+            "Reward credited: user=%s amount=%s ymid=%s",
+            session["user_id"], reward, ymid
+        )
+
+        return "OK", 200
+
     except Exception:
-        conn.rollback(); app.logger.exception("Withdrawal request failed")
-        return jsonify({"error":"উত্তোলনের অনুরোধ নেওয়া যায়নি"}),500
-    finally: conn.close()
-    return jsonify({"success":True,"message":"উত্তোলনের অনুরোধ জমা হয়েছে"})
+        conn.rollback()
+        app.logger.exception("Monetag postback failed")
+        return "Server error", 500
+
+    finally:
+        conn.close()
+
+
+@app.route("/api/withdraw", methods=["POST", "OPTIONS"])
+def api_withdraw():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
+    if not user:
+        return jsonify({"error": "Telegram verification failed"}), 401
+
+    data = request.get_json(silent=True) or {}
+
+    try:
+        amount = round(float(data.get("amount", 0)), 2)
+    except (TypeError, ValueError):
+        return jsonify({"error": "সঠিক পরিমাণ লিখুন"}), 400
+
+    method = str(data.get("method", "")).strip()
+    account = str(data.get("account", "")).strip()
+
+    if amount <= 0:
+        return jsonify({"error": "সঠিক পরিমাণ লিখুন"}), 400
+
+    if amount < float(setting("min_withdraw", "50")):
+        return jsonify({"error": "ন্যূনতম উত্তোলনের পরিমাণ পূরণ হয়নি"}), 400
+
+    if method not in ("bKash", "Nagad"):
+        return jsonify({"error": "bKash অথবা Nagad নির্বাচন করুন"}), 400
+
+    if not re.fullmatch(r"01[3-9]\d{8}", account):
+        return jsonify({"error": "সঠিক মোবাইল নম্বর দিন"}), 400
+
+    conn = db()
+
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+
+        row = conn.execute(
+            "SELECT balance FROM users WHERE user_id=?",
+            (user["id"],)
+        ).fetchone()
+
+        if not row or float(row["balance"] or 0) < amount:
+            conn.rollback()
+            return jsonify({"error": "পর্যাপ্ত ব্যালেন্স নেই"}), 400
+
+        conn.execute("""
+            UPDATE users SET balance=balance-? WHERE user_id=?
+        """, (amount, user["id"]))
+
+        conn.execute("""
+            INSERT INTO withdrawals(user_id,amount,method,account,status)
+            VALUES(?,?,?,?,'pending')
+        """, (user["id"], amount, method, account))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        app.logger.exception("Withdrawal request failed")
+        return jsonify({"error": "উত্তোলনের অনুরোধ নেওয়া যায়নি"}), 500
+
+    finally:
+        conn.close()
+
+    return jsonify({
+        "success": True,
+        "message": "উত্তোলনের অনুরোধ জমা হয়েছে"
+    })
+
 
 @app.route("/api/withdrawals", methods=["GET", "OPTIONS"])
 def api_withdrawals():
@@ -262,45 +568,237 @@ def api_withdrawals():
     conn = db()
 
     try:
-        rows = conn.execute(
-            """SELECT id, amount, method, account, status, created_at
+        rows = conn.execute("""
+            SELECT id,amount,method,account,status,created_at
             FROM withdrawals
             WHERE user_id=?
-            ORDER BY id DESC
-            LIMIT ?""",
-            (user["id"], limit)
-        ).fetchall()
+            ORDER BY id DESC LIMIT ?
+        """, (user["id"], limit)).fetchall()
+
+        return jsonify({"items": [dict(row) for row in rows]})
+
+    finally:
+        conn.close()
+
+
+# ---------------- ADMIN AUTH ----------------
+
+def verified_admin():
+    user = verify_telegram_data(
+        request.headers.get("X-Telegram-Init-Data", "")
+    )
+
+    if not user or not ADMIN_ID or int(user.get("id", 0)) != ADMIN_ID:
+        return None
+
+    return user
+
+
+# ---------------- DESIGN MANAGER API ----------------
+
+DEFAULT_DESIGN = {
+    "theme": "dark",
+    "colors": {
+        "background": "#101827",
+        "card": "#1b2638",
+        "accent": "#16a34a",
+        "text": "#ffffff",
+        "muted": "#9ca3af"
+    },
+    "labels": {
+        "appName": "AdEarn",
+        "ads": "বিজ্ঞাপন",
+        "balance": "ব্যালেন্স",
+        "referral": "রেফার",
+        "withdraw": "উত্তোলন",
+        "history": "উত্তোলনের ইতিহাস",
+        "statistics": "পরিসংখ্যান",
+        "profile": "প্রোফাইল"
+    },
+    "order": [
+        "ads", "balance", "referral", "withdraw",
+        "history", "statistics", "profile"
+    ],
+    "visibility": {
+        "ads": True,
+        "balance": True,
+        "referral": True,
+        "withdraw": True,
+        "history": True,
+        "statistics": True,
+        "profile": True
+    }
+}
+
+
+def get_design():
+    try:
+        saved = json.loads(setting("design_config", "{}"))
+        if not isinstance(saved, dict):
+            return DEFAULT_DESIGN.copy()
+
+        result = json.loads(json.dumps(DEFAULT_DESIGN))
+
+        for key in ("theme", "colors", "labels", "order", "visibility"):
+            if key in saved:
+                if isinstance(result.get(key), dict) and isinstance(saved[key], dict):
+                    result[key].update(saved[key])
+                else:
+                    result[key] = saved[key]
+
+        return result
+
+    except Exception:
+        return json.loads(json.dumps(DEFAULT_DESIGN))
+
+
+@app.route("/api/design", methods=["GET", "OPTIONS"])
+def public_design():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    return jsonify(get_design())
+
+
+@app.route("/api/admin/design", methods=["GET", "POST", "OPTIONS"])
+def admin_design():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    if not verified_admin():
+        return jsonify({"error": "অ্যাডমিন অনুমতি নেই"}), 403
+
+    if request.method == "GET":
+        return jsonify(get_design())
+
+    data = request.get_json(silent=True) or {}
+    current = get_design()
+
+    themes = ("dark", "light", "green", "blue", "red", "custom")
+
+    theme = str(data.get("theme", current["theme"])).lower()
+
+    if theme not in themes:
+        return jsonify({"error": "ভুল থিম"}), 400
+
+    color_keys = ("background", "card", "accent", "text", "muted")
+    colors = dict(current["colors"])
+
+    for key in color_keys:
+        if key in data.get("colors", {}):
+            value = str(data["colors"][key]).strip()
+
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+                return jsonify({"error": "রঙের HEX কোড সঠিক নয়"}), 400
+
+            colors[key] = value
+
+    label_keys = (
+        "appName", "ads", "balance", "referral",
+        "withdraw", "history", "statistics", "profile"
+    )
+
+    labels = dict(current["labels"])
+
+    for key in label_keys:
+        if key in data.get("labels", {}):
+            value = str(data["labels"][key]).strip()
+
+            if not value or len(value) > 40:
+                return jsonify({"error": "লেখা ১ থেকে ৪০ অক্ষরের মধ্যে দিন"}), 400
+
+            labels[key] = value
+
+    allowed_sections = [
+        "ads", "balance", "referral", "withdraw",
+        "history", "statistics", "profile"
+    ]
+
+    order = data.get("order", current["order"])
+
+    if (
+        not isinstance(order, list)
+        or len(order) != len(allowed_sections)
+        or set(order) != set(allowed_sections)
+    ):
+        return jsonify({"error": "সেকশনের অবস্থান সঠিক নয়"}), 400
+
+    visibility = dict(current["visibility"])
+    incoming_visibility = data.get("visibility", {})
+
+    if not isinstance(incoming_visibility, dict):
+        return jsonify({"error": "Visibility সেটিংস সঠিক নয়"}), 400
+
+    for key, value in incoming_visibility.items():
+        if key not in allowed_sections or not isinstance(value, bool):
+            return jsonify({"error": "Visibility সেটিংস সঠিক নয়"}), 400
+        visibility[key] = value
+
+    config = {
+        "theme": theme,
+        "colors": colors,
+        "labels": labels,
+        "order": order,
+        "visibility": visibility
+    }
+
+    set_setting(
+        "design_config",
+        json.dumps(config, ensure_ascii=False)
+    )
+
+    return jsonify({
+        "success": True,
+        "message": "ডিজাইন সংরক্ষণ হয়েছে",
+        "design": config
+    })
+
+
+# ---------------- ADMIN WEB API ----------------
+
+@app.route("/api/admin/summary", methods=["GET", "OPTIONS"])
+def admin_summary():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    if not verified_admin():
+        return jsonify({"error": "অ্যাডমিন অনুমতি নেই"}), 403
+
+    conn = db()
+
+    try:
+        total_users = conn.execute(
+            "SELECT COUNT(*) n FROM users"
+        ).fetchone()["n"]
+
+        total_balance = conn.execute(
+            "SELECT COALESCE(SUM(balance),0) n FROM users"
+        ).fetchone()["n"]
+
+        pending = conn.execute("""
+            SELECT COUNT(*) n,COALESCE(SUM(amount),0) amount
+            FROM withdrawals WHERE status='pending'
+        """).fetchone()
+
+        ads_today = conn.execute("""
+            SELECT COUNT(*) n FROM ad_sessions WHERE rewarded_at LIKE ?
+        """, (today_text() + "%",)).fetchone()["n"]
 
         return jsonify({
-            "items": [dict(row) for row in rows]
+            "total_users": total_users,
+            "total_balance": float(total_balance or 0),
+            "pending_count": pending["n"],
+            "pending_amount": float(pending["amount"] or 0),
+            "ads_today": ads_today,
+            "settings": {
+                "reward_amount": float(setting("reward_amount", "10")),
+                "daily_limit": int(setting("daily_limit", "20")),
+                "min_withdraw": float(setting("min_withdraw", "50"))
+            }
         })
 
     finally:
         conn.close()
-        
-# ---------------- ADMIN WEB API ----------------
-def verified_admin():
-    user=verify_telegram_data(request.headers.get("X-Telegram-Init-Data",""))
-    if not user or not ADMIN_ID or int(user.get("id",0))!=ADMIN_ID:
-        return None
-    return user
-
-@app.route("/api/admin/summary",methods=["GET","OPTIONS"])
-def admin_summary():
-    if request.method=="OPTIONS": return "",204
-    if not verified_admin(): return jsonify({"error":"অ্যাডমিন অনুমতি নেই"}),403
-    conn=db()
-    try:
-        total_users=conn.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]
-        total_balance=conn.execute("SELECT COALESCE(SUM(balance),0) n FROM users").fetchone()["n"]
-        pending=conn.execute("SELECT COUNT(*) n,COALESCE(SUM(amount),0) amount FROM withdrawals WHERE status='pending'").fetchone()
-        ads_today=conn.execute("SELECT COUNT(*) n FROM ad_sessions WHERE rewarded_at LIKE ?",(today_text()+"%",)).fetchone()["n"]
-        return jsonify({"total_users":total_users,"total_balance":float(total_balance or 0),
-            "pending_count":pending["n"],"pending_amount":float(pending["amount"] or 0),"ads_today":ads_today,
-            "settings":{"reward_amount":float(setting("reward_amount","10")),
-                        "daily_limit":int(setting("daily_limit","20")),
-                        "min_withdraw":float(setting("min_withdraw","50"))}})
-    finally: conn.close()
 
 
 @app.route("/api/admin/users", methods=["GET", "OPTIONS"])
@@ -320,6 +818,7 @@ def admin_users():
         return jsonify({"error": "ভুল limit বা offset"}), 400
 
     conn = db()
+
     try:
         where = ""
         params = []
@@ -333,239 +832,521 @@ def admin_users():
                 params.extend(["%" + q + "%", "%" + q + "%"])
 
         total = conn.execute(
-            "SELECT COUNT(*) n FROM users " + where, params
+            "SELECT COUNT(*) n FROM users " + where,
+            params
         ).fetchone()["n"]
 
-        rows = conn.execute(
-            """SELECT user_id, COALESCE(username,'') username,
+        rows = conn.execute("""
+            SELECT user_id,COALESCE(username,'') username,
             COALESCE(first_name,'') first_name,
             COALESCE(balance,0) balance,
             COALESCE(joined_at,'') joined_at
-            FROM users """ + where +
-            " ORDER BY joined_at DESC LIMIT ? OFFSET ?",
-            params + [limit, offset]
-        ).fetchall()
+            FROM users
+        """ + where + """
+            ORDER BY joined_at DESC LIMIT ? OFFSET ?
+        """, params + [limit, offset]).fetchall()
 
         return jsonify({
             "total": total,
             "items": [dict(row) for row in rows]
         })
+
     finally:
         conn.close()
 
-@app.route("/api/admin/withdrawals",methods=["GET","OPTIONS"])
+
+@app.route("/api/admin/withdrawals", methods=["GET", "OPTIONS"])
 def admin_withdrawals():
-    if request.method=="OPTIONS": return "",204
-    if not verified_admin(): return jsonify({"error":"অ্যাডমিন অনুমতি নেই"}),403
-    conn=db()
-    try:
-        rows=conn.execute("""SELECT w.id,w.user_id,w.amount,w.method,w.account,w.status,w.created_at,
-            COALESCE(u.first_name,'') first_name,COALESCE(u.username,'') username
-            FROM withdrawals w LEFT JOIN users u ON u.user_id=w.user_id
-            WHERE w.status='pending' ORDER BY w.id DESC LIMIT 100""").fetchall()
-        return jsonify({"items":[dict(row) for row in rows]})
-    finally: conn.close()
+    if request.method == "OPTIONS":
+        return "", 204
 
-@app.route("/api/admin/withdrawal/action",methods=["POST","OPTIONS"])
+    if not verified_admin():
+        return jsonify({"error": "অ্যাডমিন অনুমতি নেই"}), 403
+
+    conn = db()
+
+    try:
+        rows = conn.execute("""
+            SELECT w.id,w.user_id,w.amount,w.method,w.account,
+            w.status,w.created_at,
+            COALESCE(u.first_name,'') first_name,
+            COALESCE(u.username,'') username
+            FROM withdrawals w
+            LEFT JOIN users u ON u.user_id=w.user_id
+            WHERE w.status='pending'
+            ORDER BY w.id DESC LIMIT 100
+        """).fetchall()
+
+        return jsonify({"items": [dict(row) for row in rows]})
+
+    finally:
+        conn.close()
+
+
+@app.route("/api/admin/withdrawal/action", methods=["POST", "OPTIONS"])
 def admin_withdrawal_action():
-    if request.method=="OPTIONS": return "",204
-    if not verified_admin(): return jsonify({"error":"অ্যাডমিন অনুমতি নেই"}),403
-    data=request.get_json(silent=True) or {}
-    try: wid=int(data.get("id",0))
-    except (TypeError,ValueError): return jsonify({"error":"সঠিক অনুরোধ ID দিন"}),400
-    action=str(data.get("action","")).lower()
-    if wid<=0 or action not in ("approve","reject"):
-        return jsonify({"error":"অ্যাকশন বা ID সঠিক নয়"}),400
-    conn=db()
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        row=conn.execute("SELECT user_id,amount FROM withdrawals WHERE id=? AND status='pending'",(wid,)).fetchone()
-        if not row:
-            conn.rollback(); return jsonify({"error":"পেন্ডিং অনুরোধ পাওয়া যায়নি"}),404
-        if action=="approve":
-            conn.execute("UPDATE withdrawals SET status='paid' WHERE id=? AND status='pending'",(wid,))
-            message="Paid হিসেবে চিহ্নিত হয়েছে। টাকা bKash/Nagad-এ ম্যানুয়ালি পাঠাতে হবে।"
-        else:
-            conn.execute("UPDATE withdrawals SET status='rejected' WHERE id=? AND status='pending'",(wid,))
-            conn.execute("UPDATE users SET balance=balance+? WHERE user_id=?",(row["amount"],row["user_id"]))
-            message="অনুরোধ বাতিল এবং ব্যালেন্স ফেরত দেওয়া হয়েছে।"
-        conn.commit()
-        return jsonify({"success":True,"message":message})
-    except Exception:
-        conn.rollback(); app.logger.exception("Admin withdrawal action failed")
-        return jsonify({"error":"অ্যাকশন সম্পন্ন করা যায়নি"}),500
-    finally: conn.close()
+    if request.method == "OPTIONS":
+        return "", 204
 
-@app.route("/api/admin/settings",methods=["POST","OPTIONS"])
-def admin_settings():
-    if request.method=="OPTIONS": return "",204
-    if not verified_admin(): return jsonify({"error":"অ্যাডমিন অনুমতি নেই"}),403
-    data=request.get_json(silent=True) or {}
+    if not verified_admin():
+        return jsonify({"error": "অ্যাডমিন অনুমতি নেই"}), 403
+
+    data = request.get_json(silent=True) or {}
+
     try:
-        reward=round(float(data.get("reward_amount")),2)
-        limit=int(data.get("daily_limit"))
-        minimum=round(float(data.get("min_withdraw")),2)
-        if not (0.01<=reward<=100000 and 1<=limit<=10000 and 1<=minimum<=10000000):
-            raise ValueError
-    except (TypeError,ValueError):
-        return jsonify({"error":"সেটিংসের মান সঠিক সীমার মধ্যে দিন"}),400
-    conn=db()
+        wid = int(data.get("id", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "সঠিক অনুরোধ ID দিন"}), 400
+
+    action = str(data.get("action", "")).lower()
+
+    if wid <= 0 or action not in ("approve", "reject"):
+        return jsonify({"error": "অ্যাকশন বা ID সঠিক নয়"}), 400
+
+    conn = db()
+
     try:
         conn.execute("BEGIN IMMEDIATE")
-        for key,value in (("reward_amount",reward),("daily_limit",limit),("min_withdraw",minimum)):
-            conn.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)",(key,str(value)))
+
+        row = conn.execute("""
+            SELECT user_id,amount FROM withdrawals
+            WHERE id=? AND status='pending'
+        """, (wid,)).fetchone()
+
+        if not row:
+            conn.rollback()
+            return jsonify({"error": "পেন্ডিং অনুরোধ পাওয়া যায়নি"}), 404
+
+        if action == "approve":
+            conn.execute("""
+                UPDATE withdrawals SET status='paid'
+                WHERE id=? AND status='pending'
+            """, (wid,))
+
+            message = (
+                "Paid হিসেবে চিহ্নিত হয়েছে। টাকা bKash/Nagad-এ "
+                "ম্যানুয়ালি পাঠাতে হবে।"
+            )
+
+        else:
+            conn.execute("""
+                UPDATE withdrawals SET status='rejected'
+                WHERE id=? AND status='pending'
+            """, (wid,))
+
+            conn.execute("""
+                UPDATE users SET balance=balance+? WHERE user_id=?
+            """, (row["amount"], row["user_id"]))
+
+            message = "অনুরোধ বাতিল এবং ব্যালেন্স ফেরত দেওয়া হয়েছে।"
+
         conn.commit()
-        return jsonify({"success":True,"message":"সেটিংস সংরক্ষণ হয়েছে"})
+
+        return jsonify({"success": True, "message": message})
+
     except Exception:
-        conn.rollback(); app.logger.exception("Admin settings update failed")
-        return jsonify({"error":"সেটিংস সংরক্ষণ করা যায়নি"}),500
-    finally: conn.close()
+        conn.rollback()
+        app.logger.exception("Admin withdrawal action failed")
+        return jsonify({"error": "অ্যাকশন সম্পন্ন করা যায়নি"}), 500
+
+    finally:
+        conn.close()
+
+
+@app.route("/api/admin/settings", methods=["POST", "OPTIONS"])
+def admin_settings():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    if not verified_admin():
+        return jsonify({"error": "অ্যাডমিন অনুমতি নেই"}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    try:
+        reward = round(float(data.get("reward_amount")), 2)
+        limit = int(data.get("daily_limit"))
+        minimum = round(float(data.get("min_withdraw")), 2)
+
+        if not (
+            0.01 <= reward <= 100000
+            and 1 <= limit <= 10000
+            and 1 <= minimum <= 10000000
+        ):
+            raise ValueError
+
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "সেটিংসের মান সঠিক সীমার মধ্যে দিন"
+        }), 400
+
+    conn = db()
+
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+
+        for key, value in (
+            ("reward_amount", reward),
+            ("daily_limit", limit),
+            ("min_withdraw", minimum)
+        ):
+            conn.execute("""
+                INSERT OR REPLACE INTO settings(key,value)
+                VALUES(?,?)
+            """, (key, str(value)))
+
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "সেটিংস সংরক্ষণ হয়েছে"
+        })
+
+    except Exception:
+        conn.rollback()
+        app.logger.exception("Admin settings update failed")
+        return jsonify({"error": "সেটিংস সংরক্ষণ করা যায়নি"}), 500
+
+    finally:
+        conn.close()
+
 
 # ---------------- TELEGRAM COMMANDS ----------------
-async def start(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    tg_user=update.effective_user
-    if not tg_user or not update.message: return
-    referred_by=None
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_user = update.effective_user
+
+    if not tg_user or not update.message:
+        return
+
+    referred_by = None
+
     if context.args:
         try:
-            candidate=int(context.args[0])
-            if candidate!=tg_user.id: referred_by=candidate
-        except ValueError: pass
-    add_user(tg_user.id,tg_user.username,tg_user.first_name,referred_by)
-    keyboard=[[InlineKeyboardButton("অ্যাপ খুলুন",web_app=WebAppInfo(url=WEB_URL))]]
-    await update.message.reply_text("স্বাগতম! বিজ্ঞাপন দেখে আয় করার অ্যাপটি খুলুন।",
-                                    reply_markup=InlineKeyboardMarkup(keyboard))
+            candidate = int(context.args[0])
+            if candidate != tg_user.id:
+                referred_by = candidate
+        except ValueError:
+            pass
 
-async def balance(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    row=get_user(update.effective_user.id); amount=float(row["balance"] or 0) if row else 0
+    add_user(
+        tg_user.id,
+        tg_user.username,
+        tg_user.first_name,
+        referred_by
+    )
+
+    keyboard = [[
+        InlineKeyboardButton(
+            "অ্যাপ খুলুন",
+            web_app=WebAppInfo(url=WEB_URL)
+        )
+    ]]
+
+    await update.message.reply_text(
+        "স্বাগতম! বিজ্ঞাপন দেখে আয় করার অ্যাপটি খুলুন।",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    row = get_user(update.effective_user.id)
+    amount = float(row["balance"] or 0) if row else 0
     await update.message.reply_text(f"আপনার ব্যালেন্স: ৳{amount:.2f}")
 
-async def withdraw(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("উত্তোলনের জন্য Mini App খুলে Withdraw অপশন ব্যবহার করুন।")
+
+async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "উত্তোলনের জন্য Mini App খুলে Withdraw অপশন ব্যবহার করুন।"
+    )
+
 
 def is_admin(update):
-    return bool(update.effective_user and ADMIN_ID and update.effective_user.id==ADMIN_ID)
+    return bool(
+        update.effective_user
+        and ADMIN_ID
+        and update.effective_user.id == ADMIN_ID
+    )
 
-async def admin(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
-    await update.message.reply_text("Admin commands:\n/stats - মোট ইউজার ও উত্তোলন\n/setmin 50 - সর্বনিম্ন উত্তোলন\n/setlimit 20 - দৈনিক বিজ্ঞাপন সীমা\n/setreward 10 - প্রতি বিজ্ঞাপনের পুরস্কার\n/approve ID - উত্তোলন Paid চিহ্নিত\n/reject ID - উত্তোলন বাতিল\n/credit USER_ID AMOUNT - ব্যালেন্স যোগ\n/panel - ওয়েব অ্যাডমিন প্যানেল")
 
-async def panel(update:Update,context:ContextTypes.DEFAULT_TYPE):
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update):
         return
-    keyboard=[[InlineKeyboardButton("🛠 Admin Panel খুলুন",
-        web_app=WebAppInfo(url=WEB_URL.rstrip("/")+"/admin.html"))]]
-    await update.message.reply_text("অ্যাডমিন প্যানেল খুলতে নিচের বাটনে চাপ দিন।",
-                                    reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def stats(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
-    conn=db()
-    users=conn.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]
-    pending=conn.execute("SELECT COUNT(*) n FROM withdrawals WHERE status='pending'").fetchone()["n"]
+    await update.message.reply_text(
+        "Admin commands:\n"
+        "/stats - মোট ইউজার ও উত্তোলন\n"
+        "/setmin 50 - সর্বনিম্ন উত্তোলন\n"
+        "/setlimit 20 - দৈনিক বিজ্ঞাপন সীমা\n"
+        "/setreward 10 - প্রতি বিজ্ঞাপনের পুরস্কার\n"
+        "/approve ID - উত্তোলন Paid চিহ্নিত\n"
+        "/reject ID - উত্তোলন বাতিল\n"
+        "/credit USER_ID AMOUNT - ব্যালেন্স যোগ\n"
+        "/panel - ওয়েব অ্যাডমিন প্যানেল"
+    )
+
+
+async def panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
+    keyboard = [[
+        InlineKeyboardButton(
+            "🛠 Admin Panel খুলুন",
+            web_app=WebAppInfo(
+                url=WEB_URL.rstrip("/") + "/admin.html"
+            )
+        )
+    ]]
+
+    await update.message.reply_text(
+        "অ্যাডমিন প্যানেল খুলতে নিচের বাটনে চাপ দিন।",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
+    conn = db()
+
+    users = conn.execute(
+        "SELECT COUNT(*) n FROM users"
+    ).fetchone()["n"]
+
+    pending = conn.execute("""
+        SELECT COUNT(*) n FROM withdrawals WHERE status='pending'
+    """).fetchone()["n"]
+
     conn.close()
-    await update.message.reply_text(f"মোট ইউজার: {users}\nপেন্ডিং উত্তোলন: {pending}")
 
-async def setmin(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
+    await update.message.reply_text(
+        f"মোট ইউজার: {users}\nপেন্ডিং উত্তোলন: {pending}"
+    )
+
+
+async def setmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
     try:
-        value=float(context.args[0])
-        if value<=0: raise ValueError
-        set_setting("min_withdraw",value)
-        await update.message.reply_text(f"সর্বনিম্ন উত্তোলন ৳{value} করা হয়েছে")
-    except (IndexError,ValueError):
+        value = float(context.args[0])
+
+        if value <= 0:
+            raise ValueError
+
+        set_setting("min_withdraw", value)
+
+        await update.message.reply_text(
+            f"সর্বনিম্ন উত্তোলন ৳{value} করা হয়েছে"
+        )
+
+    except (IndexError, ValueError):
         await update.message.reply_text("ব্যবহার: /setmin 50")
 
-async def setlimit(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
+
+async def setlimit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
     try:
-        value=int(context.args[0])
-        if value<=0: raise ValueError
-        set_setting("daily_limit",value)
-        await update.message.reply_text(f"দৈনিক বিজ্ঞাপন সীমা {value} করা হয়েছে")
-    except (IndexError,ValueError):
+        value = int(context.args[0])
+
+        if value <= 0:
+            raise ValueError
+
+        set_setting("daily_limit", value)
+
+        await update.message.reply_text(
+            f"দৈনিক বিজ্ঞাপন সীমা {value} করা হয়েছে"
+        )
+
+    except (IndexError, ValueError):
         await update.message.reply_text("ব্যবহার: /setlimit 20")
 
-async def setreward(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
+
+async def setreward(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
     try:
-        value=round(float(context.args[0]),2)
-        if value<=0: raise ValueError
-        set_setting("reward_amount",value)
-        await update.message.reply_text(f"প্রতি বিজ্ঞাপনের পুরস্কার ৳{value} করা হয়েছে")
-    except (IndexError,ValueError):
+        value = round(float(context.args[0]), 2)
+
+        if value <= 0:
+            raise ValueError
+
+        set_setting("reward_amount", value)
+
+        await update.message.reply_text(
+            f"প্রতি বিজ্ঞাপনের পুরস্কার ৳{value} করা হয়েছে"
+        )
+
+    except (IndexError, ValueError):
         await update.message.reply_text("ব্যবহার: /setreward 10")
 
-async def credit(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
+
+async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
     try:
-        user_id=int(context.args[0]); amount=round(float(context.args[1]),2)
-        if amount<=0: raise ValueError
-    except (IndexError,ValueError):
-        await update.message.reply_text("ব্যবহার: /credit USER_ID AMOUNT"); return
-    conn=db()
-    cur=conn.execute("UPDATE users SET balance=balance+? WHERE user_id=?",(amount,user_id))
-    changed=cur.rowcount; conn.commit(); conn.close()
-    await update.message.reply_text("ব্যালেন্স আপডেট করা হয়েছে।" if changed else "ইউজার পাওয়া যায়নি।")
+        user_id = int(context.args[0])
+        amount = round(float(context.args[1]), 2)
 
-async def approve(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
-    try: wid=int(context.args[0])
-    except (IndexError,ValueError):
-        await update.message.reply_text("ব্যবহার: /approve ID"); return
-    conn=db()
-    cur=conn.execute("UPDATE withdrawals SET status='paid' WHERE id=? AND status='pending'",(wid,))
-    changed=cur.rowcount; conn.commit(); conn.close()
-    await update.message.reply_text("Paid হিসেবে চিহ্নিত হয়েছে। টাকা bKash/Nagad-এ ম্যানুয়ালি পাঠাতে হবে।"
-                                    if changed else "পেন্ডিং অনুরোধ পাওয়া যায়নি।")
+        if amount <= 0:
+            raise ValueError
 
-async def reject(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update): return
-    try: wid=int(context.args[0])
-    except (IndexError,ValueError):
-        await update.message.reply_text("ব্যবহার: /reject ID"); return
-    conn=db()
+    except (IndexError, ValueError):
+        await update.message.reply_text(
+            "ব্যবহার: /credit USER_ID AMOUNT"
+        )
+        return
+
+    conn = db()
+
+    cur = conn.execute(
+        "UPDATE users SET balance=balance+? WHERE user_id=?",
+        (amount, user_id)
+    )
+
+    changed = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    await update.message.reply_text(
+        "ব্যালেন্স আপডেট করা হয়েছে।"
+        if changed else "ইউজার পাওয়া যায়নি।"
+    )
+
+
+async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
+    try:
+        wid = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("ব্যবহার: /approve ID")
+        return
+
+    conn = db()
+
+    cur = conn.execute("""
+        UPDATE withdrawals SET status='paid'
+        WHERE id=? AND status='pending'
+    """, (wid,))
+
+    changed = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    await update.message.reply_text(
+        "Paid হিসেবে চিহ্নিত হয়েছে। টাকা bKash/Nagad-এ ম্যানুয়ালি পাঠাতে হবে।"
+        if changed else "পেন্ডিং অনুরোধ পাওয়া যায়নি।"
+    )
+
+
+async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        return
+
+    try:
+        wid = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("ব্যবহার: /reject ID")
+        return
+
+    conn = db()
+
     try:
         conn.execute("BEGIN IMMEDIATE")
-        row=conn.execute("SELECT user_id,amount FROM withdrawals WHERE id=? AND status='pending'",(wid,)).fetchone()
+
+        row = conn.execute("""
+            SELECT user_id,amount FROM withdrawals
+            WHERE id=? AND status='pending'
+        """, (wid,)).fetchone()
+
         if not row:
-            conn.rollback(); await update.message.reply_text("পেন্ডিং অনুরোধ পাওয়া যায়নি।"); return
-        conn.execute("UPDATE withdrawals SET status='rejected' WHERE id=?",(wid,))
-        conn.execute("UPDATE users SET balance=balance+? WHERE user_id=?",(row["amount"],row["user_id"]))
+            conn.rollback()
+            await update.message.reply_text(
+                "পেন্ডিং অনুরোধ পাওয়া যায়নি।"
+            )
+            return
+
+        conn.execute("""
+            UPDATE withdrawals SET status='rejected' WHERE id=?
+        """, (wid,))
+
+        conn.execute("""
+            UPDATE users SET balance=balance+? WHERE user_id=?
+        """, (row["amount"], row["user_id"]))
+
         conn.commit()
+
     except Exception:
-        conn.rollback(); app.logger.exception("Withdrawal rejection failed")
-        await update.message.reply_text("অনুরোধ বাতিল করা যায়নি।"); return
-    finally: conn.close()
-    await update.message.reply_text("উত্তোলন বাতিল হয়েছে এবং ব্যালেন্স ফেরত দেওয়া হয়েছে।")
+        conn.rollback()
+        app.logger.exception("Withdrawal rejection failed")
+        await update.message.reply_text("অনুরোধ বাতিল করা যায়নি।")
+        return
+
+    finally:
+        conn.close()
+
+    await update.message.reply_text(
+        "উত্তোলন বাতিল হয়েছে এবং ব্যালেন্স ফেরত দেওয়া হয়েছে।"
+    )
+
 
 def run_web():
-    app.run(host="0.0.0.0",port=PORT,use_reloader=False)
+    app.run(
+        host="0.0.0.0",
+        port=PORT,
+        use_reloader=False
+    )
+
 
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=False)
 
+
 def main():
     init_db()
+
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN / TELEGRAM_BOT_TOKEN environment variable is missing")
+        raise RuntimeError(
+            "BOT_TOKEN / TELEGRAM_BOT_TOKEN environment variable is missing"
+        )
+
     if not POSTBACK_SECRET:
-        raise RuntimeError("POSTBACK_SECRET environment variable is missing")
-    threading.Thread(target=run_web,daemon=True).start()
-    application=(Application.builder().token(BOT_TOKEN).post_init(post_init).build())
-    application.add_handler(CommandHandler("start",start))
-    application.add_handler(CommandHandler("balance",balance))
-    application.add_handler(CommandHandler("withdraw",withdraw))
-    application.add_handler(CommandHandler("admin",admin))
-    application.add_handler(CommandHandler("panel",panel))
-    application.add_handler(CommandHandler("stats",stats))
-    application.add_handler(CommandHandler("setmin",setmin))
-    application.add_handler(CommandHandler("setlimit",setlimit))
-    application.add_handler(CommandHandler("setreward",setreward))
-    application.add_handler(CommandHandler("credit",credit))
-    application.add_handler(CommandHandler("approve",approve))
-    application.add_handler(CommandHandler("reject",reject))
+        raise RuntimeError(
+            "POSTBACK_SECRET environment variable is missing"
+        )
+
+    threading.Thread(target=run_web, daemon=True).start()
+
+    application = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("balance", balance))
+    application.add_handler(CommandHandler("withdraw", withdraw))
+    application.add_handler(CommandHandler("admin", admin))
+    application.add_handler(CommandHandler("panel", panel))
+    application.add_handler(CommandHandler("stats", stats))
+    application.add_handler(CommandHandler("setmin", setmin))
+    application.add_handler(CommandHandler("setlimit", setlimit))
+    application.add_handler(CommandHandler("setreward", setreward))
+    application.add_handler(CommandHandler("credit", credit))
+    application.add_handler(CommandHandler("approve", approve))
+    application.add_handler(CommandHandler("reject", reject))
+
     application.run_polling()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
