@@ -1,17 +1,258 @@
-<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AdEarn Admin</title><script src="https://telegram.org/js/telegram-web-app.js"></script><style>
-*{box-sizing:border-box}body{margin:0;background:#071b20;color:#e9f5f3;font-family:Arial;padding:18px}.wrap{max-width:760px;margin:auto}.card{background:#102b31;border:1px solid #245057;border-radius:15px;padding:16px;margin:12px 0}h2{margin:5px 0 15px}h3{margin:0 0 12px;color:#9fe8d9}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{font-size:24px;font-weight:bold;margin-top:7px}.muted{color:#9db7b8;font-size:13px}input,button{width:100%;padding:12px;border-radius:9px;border:1px solid #37636a;background:#071b20;color:#fff;margin:5px 0}button{background:#16a085;border:0;font-weight:bold}.danger{background:#b94a48}.ok{background:#16865f}.row{border-top:1px solid #29474d;padding:12px 0}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}#message{white-space:pre-wrap;color:#ffd37a}.small{font-size:13px;line-height:1.6;overflow-wrap:anywhere}
-</style></head><body><div class="wrap"><h2>🛠 AdEarn Admin Panel</h2><div id="message" class="muted">লোড হচ্ছে...</div><div class="grid" id="stats"></div>
-<section class="card"><h3>⚙️ অ্যাপ সেটিংস</h3><label>প্রতি বিজ্ঞাপনের পুরস্কার (৳)</label><input id="reward" type="number" min="0.01" step="0.01"><label>দৈনিক বিজ্ঞাপনের সীমা</label><input id="limit" type="number" min="1" step="1"><label>সর্বনিম্ন উত্তোলন (৳)</label><input id="minimum" type="number" min="1" step="0.01"><button onclick="saveSettings()">সেটিংস সংরক্ষণ</button></section>
-<section class="card"><h3>💸 উত্তোলনের অনুরোধ</h3><div id="withdrawals" class="muted">তালিকা লোড হচ্ছে...</div></section></div>
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AdEarn Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#071b20;color:#e9f5f3;font-family:Arial;padding:18px}
+.wrap{max-width:760px;margin:auto}
+.card{background:#102b31;border:1px solid #245057;border-radius:15px;padding:16px;margin:12px 0}
+h2{margin:5px 0 15px}
+h3{margin:0 0 12px;color:#9fe8d9}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{font-size:24px;font-weight:bold;margin-top:7px}
+.muted{color:#9db7b8;font-size:13px}
+input,button{width:100%;padding:12px;border-radius:9px;border:1px solid #37636a;background:#071b20;color:#fff;margin:5px 0}
+button{background:#16a085;border:0;font-weight:bold}
+.danger{background:#b94a48}
+.ok{background:#16865f}
+.row{border-top:1px solid #29474d;padding:12px 0}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#message{white-space:pre-wrap;color:#ffd37a}
+.small{font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.user-search{display:grid;grid-template-columns:1fr 90px;gap:8px}
+.user-search button{margin:5px 0}
+.pagination{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pagination button:disabled{opacity:.4}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>🛠 AdEarn Admin Panel</h2>
+<div id="message" class="muted">লোড হচ্ছে...</div>
+<div class="grid" id="stats"></div>
+
+<section class="card">
+<h3>⚙️ অ্যাপ সেটিংস</h3>
+<label>প্রতি বিজ্ঞাপনের পুরস্কার (৳)</label>
+<input id="reward" type="number" min="0.01" step="0.01">
+<label>দৈনিক বিজ্ঞাপনের সীমা</label>
+<input id="limit" type="number" min="1" step="1">
+<label>সর্বনিম্ন উত্তোলন (৳)</label>
+<input id="minimum" type="number" min="1" step="0.01">
+<button onclick="saveSettings()">সেটিংস সংরক্ষণ</button>
+</section>
+
+<section class="card">
+<h3>👥 সকল ইউজার</h3>
+<div class="user-search">
+<input id="userSearch" placeholder="নাম / ইউজারনেম / ID">
+<button onclick="searchUsers()">সার্চ</button>
+</div>
+<div id="userCount" class="muted">ইউজার লোড হচ্ছে...</div>
+<div id="users" class="muted">তালিকা লোড হচ্ছে...</div>
+<div class="pagination">
+<button id="prevUsers" onclick="changeUserPage(-1)" disabled>আগের পৃষ্ঠা</button>
+<button id="nextUsers" onclick="changeUserPage(1)" disabled>পরের পৃষ্ঠা</button>
+</div>
+</section>
+
+<section class="card">
+<h3>💸 উত্তোলনের অনুরোধ</h3>
+<div id="withdrawals" class="muted">তালিকা লোড হচ্ছে...</div>
+</section>
+</div>
+
 <script>
-const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();const initData=tg?.initData||"";const API="https://ad-earning-bot.fadehost.app";const headers={"Content-Type":"application/json","X-Telegram-Init-Data":initData};
-function msg(s){document.getElementById("message").textContent=s}
-async function api(path,method="GET",body=null){const r=await fetch(API+path,{method,headers,...(body?{body:JSON.stringify(body)}:{})});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw Error(d.error||"সার্ভার সমস্যা ("+r.status+")");return d}
-function stat(a,b){return `<div class="card"><div class="muted">${a}</div><div class="stat">${b}</div></div>`}
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-async function load(){try{if(!initData){msg("এই প্যানেল Telegram bot-এর /panel কমান্ড থেকে খুলতে হবে।");return}const d=await api("/api/admin/summary");document.getElementById("stats").innerHTML=stat("মোট ইউজার",d.total_users)+stat("মোট ব্যালেন্স","৳"+Number(d.total_balance).toFixed(2))+stat("আজকের বিজ্ঞাপন",d.ads_today)+stat("পেন্ডিং উত্তোলন",d.pending_count)+stat("পেন্ডিং টাকার পরিমাণ","৳"+Number(d.pending_amount).toFixed(2));document.getElementById("reward").value=d.settings.reward_amount;document.getElementById("limit").value=d.settings.daily_limit;document.getElementById("minimum").value=d.settings.min_withdraw;await loadWithdrawals();msg("অ্যাডমিন হিসেবে প্রবেশ সফল হয়েছে।")}catch(e){msg(e.message)}}
-async function loadWithdrawals(){const d=await api("/api/admin/withdrawals");const box=document.getElementById("withdrawals");if(!d.items.length){box.textContent="কোনো পেন্ডিং উত্তোলন নেই।";return}box.innerHTML=d.items.map(x=>`<div class="row"><b>#${x.id} — ৳${Number(x.amount).toFixed(2)}</b><div class="small">ইউজার: ${esc(x.first_name)} (@${esc(x.username)})<br>ID: ${x.user_id}<br>মাধ্যম: ${esc(x.method)}<br>নম্বর: ${esc(x.account)}<br>তারিখ: ${esc(x.created_at)}</div><div class="actions"><button class="ok" onclick="action(${x.id},'approve')">Approve</button><button class="danger" onclick="action(${x.id},'reject')">Reject</button></div></div>`).join("")}
-async function action(id,a){if(!confirm(`#${id} অনুরোধটি ${a==="approve"?"Paid হিসেবে চিহ্নিত":"বাতিল ও ব্যালেন্স ফেরত"} করতে চাস?`))return;try{await api("/api/admin/withdrawal/action","POST",{id,action:a});msg("কাজটি সম্পন্ন হয়েছে।");await load()}catch(e){msg(e.message)}}
-async function saveSettings(){const p={reward_amount:document.getElementById("reward").value,daily_limit:document.getElementById("limit").value,min_withdraw:document.getElementById("minimum").value};try{await api("/api/admin/settings","POST",p);msg("সেটিংস সংরক্ষণ হয়েছে।");await load()}catch(e){msg(e.message)}}
+const tg=window.Telegram?.WebApp;
+tg?.ready();
+tg?.expand();
+
+const initData=tg?.initData||"";
+const API="https://ad-earning-bot.fadehost.app";
+const headers={
+"Content-Type":"application/json",
+"X-Telegram-Init-Data":initData
+};
+
+let userOffset=0;
+let userQuery="";
+const userLimit=50;
+let userTotal=0;
+
+function msg(s){
+document.getElementById("message").textContent=s;
+}
+
+async function api(path,method="GET",body=null){
+const r=await fetch(API+path,{
+method,
+headers,
+...(body?{body:JSON.stringify(body)}:{})
+});
+let d={};
+try{d=await r.json()}catch(e){}
+if(!r.ok)throw Error(d.error||"সার্ভার সমস্যা ("+r.status+")");
+return d;
+}
+
+function stat(a,b){
+return `<div class="card"><div class="muted">${a}</div><div class="stat">${b}</div></div>`;
+}
+
+function esc(s){
+return String(s??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#39;"
+}[c]));
+}
+
+async function load(){
+try{
+if(!initData){
+msg("এই প্যানেল Telegram bot-এর /panel কমান্ড থেকে খুলতে হবে।");
+return;
+}
+
+const d=await api("/api/admin/summary");
+
+document.getElementById("stats").innerHTML=
+stat("মোট ইউজার",d.total_users)+
+stat("মোট ব্যালেন্স","৳"+Number(d.total_balance).toFixed(2))+
+stat("আজকের বিজ্ঞাপন",d.ads_today)+
+stat("পেন্ডিং উত্তোলন",d.pending_count)+
+stat("পেন্ডিং টাকার পরিমাণ","৳"+Number(d.pending_amount).toFixed(2));
+
+document.getElementById("reward").value=d.settings.reward_amount;
+document.getElementById("limit").value=d.settings.daily_limit;
+document.getElementById("minimum").value=d.settings.min_withdraw;
+
+await loadWithdrawals();
+await loadUsers();
+
+msg("অ্যাডমিন হিসেবে প্রবেশ সফল হয়েছে।");
+
+}catch(e){
+msg(e.message);
+}
+}
+
+async function loadUsers(){
+const box=document.getElementById("users");
+box.textContent="ইউজার লোড হচ্ছে...";
+
+try{
+const params=new URLSearchParams({
+q:userQuery,
+limit:String(userLimit),
+offset:String(userOffset)
+});
+
+const d=await api("/api/admin/users?"+params.toString());
+userTotal=Number(d.total||0);
+
+document.getElementById("userCount").textContent=
+"মোট পাওয়া গেছে: "+userTotal+" জন";
+
+if(!d.items||!d.items.length){
+box.textContent="কোনো ইউজার পাওয়া যায়নি।";
+}else{
+box.innerHTML=d.items.map(x=>`
+<div class="row">
+<b>${esc(x.first_name||"নাম নেই")}</b>
+<div class="small">
+ইউজারনেম: ${x.username?"@"+esc(x.username):"নেই"}<br>
+ইউজার ID: ${esc(x.user_id)}<br>
+ব্যালেন্স: ৳${Number(x.balance||0).toFixed(2)}<br>
+যোগদানের তারিখ: ${esc(x.joined_at||"অজানা")}
+</div>
+</div>
+`).join("");
+}
+
+document.getElementById("prevUsers").disabled=userOffset<=0;
+document.getElementById("nextUsers").disabled=
+userOffset+userLimit>=userTotal;
+
+}catch(e){
+box.textContent=e.message;
+document.getElementById("userCount").textContent="ইউজার লোড করা যায়নি।";
+}
+}
+
+function searchUsers(){
+userQuery=document.getElementById("userSearch").value.trim();
+userOffset=0;
+loadUsers();
+}
+
+function changeUserPage(direction){
+userOffset=Math.max(0,userOffset+(direction*userLimit));
+loadUsers();
+}
+
+async function loadWithdrawals(){
+const d=await api("/api/admin/withdrawals");
+const box=document.getElementById("withdrawals");
+
+if(!d.items.length){
+box.textContent="কোনো পেন্ডিং উত্তোলন নেই।";
+return;
+}
+
+box.innerHTML=d.items.map(x=>`
+<div class="row">
+<b>#${x.id} — ৳${Number(x.amount).toFixed(2)}</b>
+<div class="small">
+ইউজার: ${esc(x.first_name)} (@${esc(x.username)})<br>
+ID: ${x.user_id}<br>
+মাধ্যম: ${esc(x.method)}<br>
+নম্বর: ${esc(x.account)}<br>
+তারিখ: ${esc(x.created_at)}
+</div>
+<div class="actions">
+<button class="ok" onclick="action(${x.id},'approve')">Approve</button>
+<button class="danger" onclick="action(${x.id},'reject')">Reject</button>
+</div>
+</div>
+`).join("");
+}
+
+async function action(id,a){
+if(!confirm(`#${id} অনুরোধটি ${a==="approve"?"Paid হিসেবে চিহ্নিত":"বাতিল ও ব্যালেন্স ফেরত"} করতে চাস?`))return;
+
+try{
+await api("/api/admin/withdrawal/action","POST",{id,action:a});
+msg("কাজটি সম্পন্ন হয়েছে।");
+await load();
+}catch(e){
+msg(e.message);
+}
+}
+
+async function saveSettings(){
+const p={
+reward_amount:document.getElementById("reward").value,
+daily_limit:document.getElementById("limit").value,
+min_withdraw:document.getElementById("minimum").value
+};
+
+try{
+await api("/api/admin/settings","POST",p);
+msg("সেটিংস সংরক্ষণ হয়েছে।");
+await load();
+}catch(e){
+msg(e.message);
+}
+}
+
 load();
-</script></body></html>
+</script>
+</body>
+</html>
