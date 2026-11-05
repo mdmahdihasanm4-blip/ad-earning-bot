@@ -1,62 +1,167 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AdEarn Admin</title>
+<meta name="theme-color" content="#100b20">
+<title>AdEarn Admin Panel</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
+:root{
+ --bg:#100b20;--card:#1b1430;--text:#f8f4ff;
+ --muted:#a99cbd;--accent:#a855f7;--border:#382653;
+ --green:#20c997;--red:#ef476f;--yellow:#ffd166
+}
 *{box-sizing:border-box}
-body{margin:0;background:#071b20;color:#e9f5f3;font-family:Arial;padding:15px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif;padding:16px 13px 40px}
 .wrap{max-width:850px;margin:auto}
-.card{background:#102b31;border:1px solid #245057;border-radius:15px;padding:16px;margin:12px 0}
-h2{margin:5px 0 15px}
-h3{margin:0 0 12px;color:#9fe8d9}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.stat{font-size:24px;font-weight:bold;margin-top:7px}
-.muted{color:#9db7b8;font-size:13px}
-input,button,select{width:100%;padding:12px;border-radius:9px;border:1px solid #37636a;background:#071b20;color:#fff;margin:5px 0}
-button{background:#16a085;border:0;font-weight:bold;cursor:pointer}
-.danger{background:#b94a48}
-.ok{background:#16865f}
-.row{border-top:1px solid #29474d;padding:12px 0}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#message{white-space:pre-wrap;color:#ffd37a}
-.small{font-size:13px;line-height:1.6;overflow-wrap:anywhere}
-.user-search{display:grid;grid-template-columns:1fr 90px;gap:8px}
-.pagination{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.pagination button:disabled{opacity:.4}
-label{display:block;margin-top:9px;font-size:13px;color:#b9d3d2}
-.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.color-grid input{height:44px;padding:4px}
-.checkrow{display:flex;align-items:center;gap:9px;margin:8px 0}
-.checkrow input{width:auto;margin:0}
-.preview{border:1px dashed #668;border-radius:12px;padding:14px;margin-top:12px}
-.preview button{width:auto;padding:10px 15px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{font-size:21px;margin:0}
+h2{font-size:16px;margin:0 0 15px}
+h3{font-size:14px;margin:18px 0 10px}
+p{line-height:1.6}
+.muted{color:var(--muted);font-size:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:15px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.stat{background:#120d22;border:1px solid var(--border);border-radius:13px;padding:12px}
+.stat small{display:block;color:var(--muted);font-size:11px}
+.stat strong{display:block;font-size:21px;margin-top:5px}
+input,select,button{font:inherit}
+input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:#120d22;color:var(--text);margin:5px 0 12px}
+input[type=color]{height:44px;padding:4px}
+label{display:block;font-size:12px;color:#d9cbea;margin-top:9px}
+button{border:0;border-radius:10px;padding:11px 13px;background:var(--accent);color:white;font-weight:750;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+.btnrow{display:flex;gap:7px;flex-wrap:wrap}
+.btnrow button{flex:1}
+.secondary{background:#382653}
+.danger{background:#a52b4b}
+.success{background:#137c60}
+.smallbtn{padding:7px 10px;font-size:11px}
+#message{white-space:pre-wrap;color:var(--yellow);font-size:12px;line-height:1.7;margin:8px 0}
+.row{border-top:1px solid var(--border);padding:12px 0}
+.row:first-child{border-top:0}
+.userline{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.userline strong{font-size:13px;overflow-wrap:anywhere}
+.badge{display:inline-block;border-radius:20px;padding:4px 8px;font-size:10px;background:#ffffff15}
+.blocked{color:#ff8097;background:#632238}
+.active{color:#66e6b8;background:#164a3d}
+.pending{color:#ffd166}
+.search{display:grid;grid-template-columns:1fr 85px;gap:7px}
+.colorgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.check{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:12px}
+.check input{width:auto;margin:0}
+.sectionitem{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--border);padding:9px;border-radius:10px;margin:6px 0;background:#120d22}
+.sectionitem .controls{display:flex;gap:4px;align-items:center}
+.sectionitem button{padding:6px 9px}
+.sectionitem input{width:auto;margin:0}
+.preview{border:1px dashed #8062a3;border-radius:13px;padding:13px;margin-top:12px}
+.tabbar{display:flex;gap:6px;overflow:auto;margin:12px 0}
+.tabbar button{white-space:nowrap;background:#25183d}
+.tabbar button.selected{background:var(--accent)}
+.panel{display:none}
+.panel.selected{display:block}
+@media(min-width:600px){.grid{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-<h2>🛠 AdEarn Admin Panel</h2>
-<div id="message" class="muted">লোড হচ্ছে...</div>
-<div class="grid" id="stats"></div>
 
-<section class="card">
-<h3>⚙️ অ্যাপ সেটিংস</h3>
-<label>প্রতি বিজ্ঞাপনের পুরস্কার (৳)</label>
-<input id="reward" type="number" min="0.01" step="0.01">
-<label>দৈনিক বিজ্ঞাপনের সীমা</label>
-<input id="limit" type="number" min="1" step="1">
-<label>সর্বনিম্ন উত্তোলন (৳)</label>
-<input id="minimum" type="number" min="1" step="0.01">
-<button onclick="saveSettings()">সেটিংস সংরক্ষণ</button>
+<header>
+<div>
+<h1>🛠 AdEarn Admin</h1>
+<div class="muted">অ্যাডমিন কন্ট্রোল প্যানেল</div>
+</div>
+<button class="smallbtn" onclick="refreshAll()">↻ Refresh</button>
+</header>
+
+<div id="message">অ্যাডমিন প্যানেল লোড হচ্ছে...</div>
+
+<div class="grid" id="stats">
+<div class="stat"><small>মোট ইউজার</small><strong>—</strong></div>
+<div class="stat"><small>মোট ব্যালেন্স</small><strong>—</strong></div>
+<div class="stat"><small>পেন্ডিং উত্তোলন</small><strong>—</strong></div>
+<div class="stat"><small>আজকের বিজ্ঞাপন</small><strong>—</strong></div>
+</div>
+
+<div class="tabbar">
+<button class="selected" onclick="showTab('dashboard',this)">🏠 Dashboard</button>
+<button onclick="showTab('users',this)">👥 Users</button>
+<button onclick="showTab('withdrawals',this)">💸 Withdraw</button>
+<button onclick="showTab('settings',this)">⚙️ Settings</button>
+<button onclick="showTab('design',this)">🎨 Design</button>
+</div>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="panel selected">
+<div class="card">
+<h2>📊 সার্ভার ও অ্যাপের তথ্য</h2>
+<div id="dashboardInfo" class="muted">তথ্য লোড হচ্ছে...</div>
+</div>
 </section>
 
-<section class="card">
-<h3>🎨 ডিজাইন ও লেআউট ম্যানেজার</h3>
-<label>অ্যাপের থিম</label>
-<select id="theme" onchange="previewDesign()">
+<!-- USERS -->
+<section id="users" class="panel">
+<div class="card">
+<h2>👥 ইউজার ম্যানেজমেন্ট</h2>
+<div class="search">
+<input id="userSearch" placeholder="নাম, ইউজারনেম বা ID">
+<button onclick="loadUsers(true)">Search</button>
+</div>
+<div id="userCount" class="muted"></div>
+<div id="userList">ইউজার লোড হচ্ছে...</div>
+<div class="btnrow">
+<button class="secondary" onclick="changePage(-1)">আগের পেজ</button>
+<button class="secondary" onclick="changePage(1)">পরের পেজ</button>
+</div>
+</div>
+</section>
+
+<!-- WITHDRAWALS -->
+<section id="withdrawals" class="panel">
+<div class="card">
+<h2>💸 পেন্ডিং উত্তোলন</h2>
+<div class="muted">Approve করলে Paid হবে। Reject করলে ইউজারের টাকা ফেরত যাবে।</div>
+<div id="withdrawList">লোড হচ্ছে...</div>
+<button class="secondary" style="width:100%" onclick="loadWithdrawals()">↻ রিফ্রেশ</button>
+</div>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings" class="panel">
+<div class="card">
+<h2>⚙️ অ্যাপ সেটিংস</h2>
+
+<label>প্রতি বিজ্ঞাপনের পুরস্কার (৳)</label>
+<input id="reward" type="number" min=".01" step=".01">
+
+<label>প্রতিদিন বিজ্ঞাপনের সীমা</label>
+<input id="dailyLimit" type="number" min="1">
+
+<label>সর্বনিম্ন উত্তোলন (৳)</label>
+<input id="minWithdraw" type="number" min="1" step=".01">
+
+<button style="width:100%" onclick="saveSettings()">সেটিংস সংরক্ষণ করুন</button>
+</div>
+</section>
+
+<!-- DESIGN -->
+<section id="design" class="panel">
+<div class="card">
+<h2>🎨 অ্যাপ ডিজাইন ম্যানেজার</h2>
+<p class="muted">এখানে পরিবর্তন করলে অ্যাপের ডিজাইনে প্রভাব পড়বে।</p>
+
+<label>অ্যাপের নাম</label>
+<input id="appName" maxlength="60">
+
+<label>হেডারের লেখা</label>
+<input id="headerText" maxlength="120">
+
+<label>ফুটারের লেখা</label>
+<input id="footerText" maxlength="160">
+
+<label>থিম</label>
+<select id="theme">
 <option value="dark">Dark</option>
 <option value="light">Light</option>
 <option value="green">Green</option>
@@ -65,64 +170,37 @@ label{display:block;margin-top:9px;font-size:13px;color:#b9d3d2}
 <option value="custom">Custom</option>
 </select>
 
-<h3 style="margin-top:18px">🌈 কালার ম্যানেজার</h3>
-<div class="color-grid">
-<div><label>ব্যাকগ্রাউন্ড</label><input type="color" id="bg" value="#071b20" oninput="previewDesign()"></div>
-<div><label>কার্ডের রং</label><input type="color" id="cardColor" value="#102b31" oninput="previewDesign()"></div>
-<div><label>প্রধান বাটন</label><input type="color" id="buttonColor" value="#16a085" oninput="previewDesign()"></div>
-<div><label>লেখার রং</label><input type="color" id="textColor" value="#e9f5f3" oninput="previewDesign()"></div>
-<div><label>বর্ডারের রং</label><input type="color" id="borderColor" value="#245057" oninput="previewDesign()"></div>
-<div><label>সেকেন্ডারি লেখা</label><input type="color" id="mutedColor" value="#9db7b8" oninput="previewDesign()"></div>
+<h3>🌈 কালার পরিবর্তন</h3>
+<div class="colorgrid">
+<div><label>ব্যাকগ্রাউন্ড</label><input type="color" id="colorBackground"></div>
+<div><label>কার্ড</label><input type="color" id="colorCard"></div>
+<div><label>বাটন</label><input type="color" id="colorButton"></div>
+<div><label>লেখা</label><input type="color" id="colorText"></div>
+<div><label>বর্ডার</label><input type="color" id="colorBorder"></div>
+<div><label>মিউটেড লেখা</label><input type="color" id="colorMuted"></div>
+<div><label>অ্যাকসেন্ট</label><input type="color" id="colorAccent"></div>
 </div>
 
-<h3 style="margin-top:18px">✍️ নাম ও লেখা পরিবর্তন</h3>
-<label>অ্যাপের নাম</label>
-<input id="appName" maxlength="40" placeholder="AdEarn">
-<label>হেডারের লেখা</label>
-<input id="headerText" maxlength="80" placeholder="স্বাগতম">
-<label>ফুটারের লেখা</label>
-<input id="footerText" maxlength="100" placeholder="ধন্যবাদ আমাদের সাথে থাকার জন্য">
+<h3>✍️ বাটন ও সেকশনের নাম</h3>
+<div id="labelFields"></div>
 
-<h3 style="margin-top:18px">🔘 বাটনের নাম</h3>
-<div id="labelsEditor"></div>
+<h3>↕️ সেকশনের অবস্থান ও দেখানো/লুকানো</h3>
+<p class="muted">উপর-নিচের বাটন দিয়ে অবস্থান পরিবর্তন করো। টিক তুলে দিলে সেকশনটি লুকানো হবে।</p>
+<div id="orderList"></div>
 
-<h3 style="margin-top:18px">📐 সেকশনের অবস্থান</h3>
-<p class="muted">সংখ্যা ছোট হলে সেকশন আগে দেখাবে। একই সংখ্যা ব্যবহার করবে না।</p>
-<div id="orderEditor"></div>
-
-<h3 style="margin-top:18px">👁 সেকশন দেখানো বা লুকানো</h3>
-<div id="visibilityEditor"></div>
-
-<h3 style="margin-top:18px">📱 ডিজাইন প্রিভিউ</h3>
-<div class="preview" id="preview">
-<div id="previewTitle">AdEarn</div>
-<button id="previewButton">বিজ্ঞাপন দেখুন</button>
+<div class="preview" id="designPreview">
+<b>লাইভ প্রিভিউ</b>
+<p id="previewApp">AdEarn</p>
+<button id="previewButton">নমুনা বাটন</button>
 </div>
 
-<div class="actions" style="margin-top:12px">
-<button onclick="saveDesign()">💾 ডিজাইন সংরক্ষণ</button>
-<button class="danger" onclick="resetDesign()">ডিফল্ট ডিজাইন</button>
+<div class="btnrow" style="margin-top:14px">
+<button class="secondary" onclick="loadDesign()">রিসেট / রিফ্রেশ</button>
+<button onclick="saveDesign()">ডিজাইন সংরক্ষণ</button>
+</div>
 </div>
 </section>
 
-<section class="card">
-<h3>👥 সকল ইউজার</h3>
-<div class="user-search">
-<input id="userSearch" placeholder="নাম / ইউজারনেম / ID">
-<button onclick="searchUsers()">সার্চ</button>
-</div>
-<div id="userCount" class="muted">ইউজার লোড হচ্ছে...</div>
-<div id="users" class="muted">তালিকা লোড হচ্ছে...</div>
-<div class="pagination">
-<button id="prevUsers" onclick="changeUserPage(-1)" disabled>আগের পৃষ্ঠা</button>
-<button id="nextUsers" onclick="changeUserPage(1)" disabled>পরের পৃষ্ঠা</button>
-</div>
-</section>
-
-<section class="card">
-<h3>💸 উত্তোলনের অনুরোধ</h3>
-<div id="withdrawals" class="muted">তালিকা লোড হচ্ছে...</div>
-</section>
 </div>
 
 <script>
@@ -130,327 +208,415 @@ const tg=window.Telegram?.WebApp;
 tg?.ready();
 tg?.expand();
 
-const initData=tg?.initData||"";
 const API="https://ad-earning-bot.fadehost.app";
-const headers={
-"Content-Type":"application/json",
-"X-Telegram-Init-Data":initData
-};
+const $=id=>document.getElementById(id);
 
-let userOffset=0;
-let userQuery="";
-const userLimit=50;
-let userTotal=0;
+let page=0;
+const PAGE_SIZE=50;
+let totalUsers=0;
 
-const sections=[
-["home","হোম"],
-["ads","বিজ্ঞাপন"],
-["balance","ব্যালেন্স"],
-["referral","রেফার"],
-["withdraw","উত্তোলন"],
-["withdrawHistory","উত্তোলনের ইতিহাস"],
-["profile","প্রোফাইল"],
-["statistics","পরিসংখ্যান"]
+const SECTIONS=[
+ ["home","হোম"],
+ ["ads","বিজ্ঞাপন"],
+ ["balance","ব্যালেন্স"],
+ ["referral","রেফারেল"],
+ ["withdraw","উত্তোলন"],
+ ["withdrawHistory","উত্তোলনের ইতিহাস"],
+ ["profile","প্রোফাইল"],
+ ["statistics","পরিসংখ্যান"]
 ];
 
-const defaultDesign={
-theme:"dark",
-colors:{
-background:"#071b20",
-card:"#102b31",
-button:"#16a085",
-text:"#e9f5f3",
-border:"#245057",
-muted:"#9db7b8"
-},
-labels:{
-home:"হোম",
-ads:"বিজ্ঞাপন দেখুন",
-balance:"ব্যালেন্স",
-referral:"রেফার",
-withdraw:"টাকা উত্তোলন",
-withdrawHistory:"উত্তোলনের ইতিহাস",
-profile:"প্রোফাইল",
-statistics:"পরিসংখ্যান"
-},
-order:["home","ads","balance","referral","withdraw","withdrawHistory","profile","statistics"],
-visibility:{
-home:true,ads:true,balance:true,referral:true,
-withdraw:true,withdrawHistory:true,profile:true,statistics:true
-},
-app_name:"AdEarn",
-header_text:"স্বাগতম",
-footer_text:"ধন্যবাদ আমাদের সাথে থাকার জন্য"
-};
+const LABELS=[
+ ["home","হোম"],
+ ["ads","বিজ্ঞাপন"],
+ ["balance","ব্যালেন্স"],
+ ["referral","রেফারেল"],
+ ["withdraw","উত্তোলন"],
+ ["withdrawHistory","উত্তোলনের ইতিহাস"],
+ ["profile","প্রোফাইল"],
+ ["statistics","পরিসংখ্যান"],
+ ["appName","অ্যাপের নাম"]
+];
 
-let design=JSON.parse(JSON.stringify(defaultDesign));
+let design=null;
 
-function msg(s){
-document.getElementById("message").textContent=s;
+function msg(t){
+$("message").textContent=t||"";
 }
 
 async function api(path,method="GET",body=null){
-const r=await fetch(API+path,{
-method,
-headers,
-...(body?{body:JSON.stringify(body)}:{})
-});
-let d={};
-try{d=await r.json()}catch(e){}
-if(!r.ok)throw Error(d.error||"সার্ভার সমস্যা ("+r.status+")");
+const init=tg?.initData||"";
+if(!init)throw Error("Telegram-এর ভেতর থেকে Admin Panel খুলুন।");
+
+const options={
+ method,
+ headers:{"X-Telegram-Init-Data":init}
+};
+
+if(body!==null){
+options.headers["Content-Type"]="application/json";
+options.body=JSON.stringify(body);
+}
+
+let r;
+try{
+r=await fetch(API+path,options);
+}catch(e){
+throw Error("সার্ভারের সঙ্গে সংযোগ হচ্ছে না।");
+}
+
+let d;
+try{d=await r.json()}
+catch(e){throw Error("সার্ভার থেকে সঠিক উত্তর পাওয়া যায়নি।")}
+
+if(!r.ok)throw Error(d.error||"অনুরোধ ব্যর্থ হয়েছে");
 return d;
 }
 
-function stat(a,b){
-return `<div class="card"><div class="muted">${a}</div><div class="stat">${b}</div></div>`;
-}
-
-function esc(s){
-return String(s??"").replace(/[&<>"']/g,c=>({
+function esc(v){
+return String(v??"").replace(/[&<>"']/g,c=>({
 "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
 }[c]));
 }
 
-async function load(){
+function money(v){
+return "৳"+Number(v||0).toFixed(2);
+}
+
+function showTab(id,button){
+document.querySelectorAll(".panel").forEach(x=>x.classList.remove("selected"));
+document.querySelectorAll(".tabbar button").forEach(x=>x.classList.remove("selected"));
+
+$(id).classList.add("selected");
+button.classList.add("selected");
+
+if(id==="users")loadUsers(true);
+if(id==="withdrawals")loadWithdrawals();
+if(id==="settings")loadSummary();
+if(id==="design")loadDesign();
+}
+
+async function loadSummary(){
 try{
-if(!initData){
-msg("এই প্যানেল Telegram bot-এর /panel কমান্ড থেকে খুলতে হবে।");
+const d=await api("/api/admin/summary");
+
+$("stats").innerHTML=`
+<div class="stat"><small>মোট ইউজার</small><strong>${Number(d.total_users||0)}</strong></div>
+<div class="stat"><small>মোট ব্যালেন্স</small><strong>${money(d.total_balance)}</strong></div>
+<div class="stat"><small>পেন্ডিং উত্তোলন</small><strong>${Number(d.pending_count||0)}</strong></div>
+<div class="stat"><small>আজকের বিজ্ঞাপন</small><strong>${Number(d.ads_today||0)}</strong></div>`;
+
+$("dashboardInfo").innerHTML=`
+মোট ইউজার: <b>${Number(d.total_users||0)}</b><br>
+মোট ইউজার ব্যালেন্স: <b>${money(d.total_balance)}</b><br>
+পেন্ডিং উত্তোলনের পরিমাণ: <b>${money(d.pending_amount)}</b><br>
+আজ সম্পন্ন বিজ্ঞাপন: <b>${Number(d.ads_today||0)}</b>`;
+
+if(d.settings){
+$("reward").value=d.settings.reward_amount;
+$("dailyLimit").value=d.settings.daily_limit;
+$("minWithdraw").value=d.settings.min_withdraw;
+}
+
+}catch(e){msg(e.message)}
+}
+
+async function saveSettings(){
+try{
+const data={
+reward_amount:Number($("reward").value),
+daily_limit:Number($("dailyLimit").value),
+min_withdraw:Number($("minWithdraw").value)
+};
+
+if(data.reward_amount<=0||data.daily_limit<1||data.min_withdraw<1){
+throw Error("সেটিংসের সঠিক মান লিখুন।");
+}
+
+const d=await api("/api/admin/settings","POST",data);
+msg(d.message||"সেটিংস সংরক্ষণ হয়েছে।");
+await loadSummary();
+
+}catch(e){msg(e.message)}
+}
+
+async function loadUsers(reset=false){
+if(reset)page=0;
+
+$("userList").textContent="ইউজার লোড হচ্ছে...";
+
+try{
+const q=$("userSearch").value.trim();
+const d=await api("/api/admin/users?q="+encodeURIComponent(q)+"&limit="+PAGE_SIZE+"&offset="+(page*PAGE_SIZE));
+
+totalUsers=Number(d.total||0);
+$("userCount").textContent="মোট ফলাফল: "+totalUsers+" | পেজ: "+(page+1);
+
+if(!d.items?.length){
+$("userList").textContent="কোনো ইউজার পাওয়া যায়নি।";
 return;
 }
-const d=await api("/api/admin/summary");
-document.getElementById("stats").innerHTML=
-stat("মোট ইউজার",d.total_users)+
-stat("মোট ব্যালেন্স","৳"+Number(d.total_balance).toFixed(2))+
-stat("আজকের বিজ্ঞাপন",d.ads_today)+
-stat("পেন্ডিং উত্তোলন",d.pending_count)+
-stat("পেন্ডিং টাকার পরিমাণ","৳"+Number(d.pending_amount).toFixed(2));
 
-document.getElementById("reward").value=d.settings.reward_amount;
-document.getElementById("limit").value=d.settings.daily_limit;
-document.getElementById("minimum").value=d.settings.min_withdraw;
+$("userList").innerHTML=d.items.map(u=>{
+const blocked=Boolean(Number(u.is_blocked));
+const name=esc(u.first_name||u.username||"নাম নেই");
+const username=u.username?"@"+esc(u.username):"";
+const uid=Number(u.user_id);
 
-await loadDesign();
-await loadWithdrawals();
-await loadUsers();
-msg("অ্যাডমিন হিসেবে প্রবেশ সফল হয়েছে।");
-}catch(e){msg(e.message);}
-}
-
-async function loadDesign(){
-try{
-const d=await api("/api/design");
-if(d.design)design=mergeDesign(d.design);
-}catch(e){
-msg("ডিজাইন লোড হয়নি: "+e.message);
-}
-renderDesignEditor();
-}
-
-function mergeDesign(saved){
-return {
-...JSON.parse(JSON.stringify(defaultDesign)),
-...saved,
-colors:{...defaultDesign.colors,...(saved.colors||{})},
-labels:{...defaultDesign.labels,...(saved.labels||{})},
-visibility:{...defaultDesign.visibility,...(saved.visibility||{})},
-order:Array.isArray(saved.order)&&saved.order.length===sections.length?saved.order:defaultDesign.order
-};
-}
-
-function renderDesignEditor(){
-document.getElementById("theme").value=design.theme||"dark";
-document.getElementById("bg").value=design.colors.background;
-document.getElementById("cardColor").value=design.colors.card;
-document.getElementById("buttonColor").value=design.colors.button;
-document.getElementById("textColor").value=design.colors.text;
-document.getElementById("borderColor").value=design.colors.border;
-document.getElementById("mutedColor").value=design.colors.muted;
-document.getElementById("appName").value=design.app_name||"AdEarn";
-document.getElementById("headerText").value=design.header_text||"";
-document.getElementById("footerText").value=design.footer_text||"";
-
-document.getElementById("labelsEditor").innerHTML=sections.map(([id,name])=>`
-<label>${name} বাটনের নাম</label>
-<input data-label="${id}" maxlength="40" value="${esc(design.labels[id]||name)}">
-`).join("");
-
-document.getElementById("orderEditor").innerHTML=design.order.map((id,i)=>`
-<label>${esc(sections.find(x=>x[0]===id)?.[1]||id)} — অবস্থান</label>
-<input type="number" min="1" max="8" data-order="${id}" value="${i+1}">
-`).join("");
-
-document.getElementById("visibilityEditor").innerHTML=sections.map(([id,name])=>`
-<label class="checkrow">
-<input type="checkbox" data-visible="${id}" ${design.visibility[id]?"checked":""}>
-${name} দেখাবে
-</label>
-`).join("");
-
-previewDesign();
-}
-
-function readDesign(){
-const colors={
-background:document.getElementById("bg").value,
-card:document.getElementById("cardColor").value,
-button:document.getElementById("buttonColor").value,
-text:document.getElementById("textColor").value,
-border:document.getElementById("borderColor").value,
-muted:document.getElementById("mutedColor").value
-};
-const labels={};
-document.querySelectorAll("[data-label]").forEach(x=>{
-labels[x.dataset.label]=x.value.trim();
-});
-const orderInputs=[...document.querySelectorAll("[data-order]")];
-const positions=orderInputs.map(x=>Number(x.value));
-if(positions.some(x=>!Number.isInteger(x)||x<1||x>8)||new Set(positions).size!==8){
-throw Error("প্রতিটি সেকশনের অবস্থান ১ থেকে ৮ পর্যন্ত আলাদা সংখ্যা দিন।");
-}
-const order=orderInputs.sort((a,b)=>Number(a.value)-Number(b.value)).map(x=>x.dataset.order);
-const visibility={};
-document.querySelectorAll("[data-visible]").forEach(x=>{
-visibility[x.dataset.visible]=x.checked;
-});
-return {
-theme:document.getElementById("theme").value,
-colors,labels,order,visibility,
-app_name:document.getElementById("appName").value.trim(),
-header_text:document.getElementById("headerText").value.trim(),
-footer_text:document.getElementById("footerText").value.trim()
-};
-}
-
-function previewDesign(){
-const p=design;
-const c={
-background:document.getElementById("bg").value,
-card:document.getElementById("cardColor").value,
-button:document.getElementById("buttonColor").value,
-text:document.getElementById("textColor").value,
-border:document.getElementById("borderColor").value
-};
-const title=document.getElementById("appName").value||"AdEarn";
-const label=document.querySelector('[data-label="ads"]')?.value||"বিজ্ঞাপন দেখুন";
-const box=document.getElementById("preview");
-box.style.background=c.card;
-box.style.color=c.text;
-box.style.borderColor=c.border;
-document.getElementById("previewTitle").textContent=title;
-const b=document.getElementById("previewButton");
-b.textContent=label;
-b.style.background=c.button;
-}
-
-async function saveDesign(){
-try{
-const payload=readDesign();
-await api("/api/admin/design","POST",payload);
-design=mergeDesign(payload);
-msg("✅ ডিজাইন সফলভাবে সংরক্ষণ হয়েছে।");
-}catch(e){msg(e.message);}
-}
-
-async function resetDesign(){
-if(!confirm("ডিফল্ট ডিজাইন ফিরিয়ে আনতে চাও?"))return;
-try{
-await api("/api/admin/design","POST",defaultDesign);
-design=JSON.parse(JSON.stringify(defaultDesign));
-renderDesignEditor();
-msg("ডিফল্ট ডিজাইন ফিরিয়ে আনা হয়েছে।");
-}catch(e){msg(e.message);}
-}
-
-async function loadUsers(){
-const box=document.getElementById("users");
-box.textContent="ইউজার লোড হচ্ছে...";
-try{
-const params=new URLSearchParams({
-q:userQuery,limit:String(userLimit),offset:String(userOffset)
-});
-const d=await api("/api/admin/users?"+params.toString());
-userTotal=Number(d.total||0);
-document.getElementById("userCount").textContent="মোট পাওয়া গেছে: "+userTotal+" জন";
-if(!d.items||!d.items.length){
-box.textContent="কোনো ইউজার পাওয়া যায়নি।";
-}else{
-box.innerHTML=d.items.map(x=>`
-<div class="row">
-<b>${esc(x.first_name||"নাম নেই")}</b>
-<div class="small">
-ইউজারনেম: ${x.username?"@"+esc(x.username):"নেই"}<br>
-ইউজার ID: ${esc(x.user_id)}<br>
-ব্যালেন্স: ৳${Number(x.balance||0).toFixed(2)}<br>
-যোগদানের তারিখ: ${esc(x.joined_at||"অজানা")}
+return `<div class="row">
+<div class="userline">
+<div>
+<strong>${name}</strong>
+<div class="muted">${username} · ID: ${uid}</div>
+<div class="muted">ব্যালেন্স: ${money(u.balance)}</div>
+<div class="muted">যোগদান: ${esc(u.joined_at||"")}</div>
 </div>
-</div>`).join("");
-}
-document.getElementById("prevUsers").disabled=userOffset<=0;
-document.getElementById("nextUsers").disabled=userOffset+userLimit>=userTotal;
+<span class="badge ${blocked?"blocked":"active"}">${blocked?"BLOCKED":"ACTIVE"}</span>
+</div>
+<div class="btnrow" style="margin-top:9px">
+<button class="${blocked?"success":"danger"}" onclick="toggleBlock(${uid},${!blocked})">
+${blocked?"আনব্লক করুন":"ব্লক করুন"}
+</button>
+</div>
+</div>`;
+}).join("");
+
 }catch(e){
-box.textContent=e.message;
-document.getElementById("userCount").textContent="ইউজার লোড করা যায়নি।";
+$("userList").textContent=e.message;
+msg(e.message);
 }
 }
 
-function searchUsers(){
-userQuery=document.getElementById("userSearch").value.trim();
-userOffset=0;
-loadUsers();
+async function toggleBlock(uid,blocked){
+const action=blocked?"block":"unblock";
+const question=blocked?"এই ইউজারকে ব্লক করতে চান?":"এই ইউজারকে আনব্লক করতে চান?";
+
+if(!confirm(question))return;
+
+try{
+const d=await api("/api/admin/user/block","POST",{
+user_id:uid,
+action
+});
+msg(d.message||"ইউজারের অবস্থা পরিবর্তন হয়েছে।");
+await loadUsers();
+}catch(e){msg(e.message)}
 }
 
-function changeUserPage(direction){
-userOffset=Math.max(0,userOffset+(direction*userLimit));
+function changePage(direction){
+const next=page+direction;
+if(next<0||next*PAGE_SIZE>=totalUsers)return;
+page=next;
 loadUsers();
 }
 
 async function loadWithdrawals(){
+$("withdrawList").textContent="লোড হচ্ছে...";
+
+try{
 const d=await api("/api/admin/withdrawals");
-const box=document.getElementById("withdrawals");
-if(!d.items.length){
-box.textContent="কোনো পেন্ডিং উত্তোলন নেই।";
+
+if(!d.items?.length){
+$("withdrawList").textContent="কোনো পেন্ডিং উত্তোলন নেই।";
 return;
 }
-box.innerHTML=d.items.map(x=>`
+
+$("withdrawList").innerHTML=d.items.map(w=>`
 <div class="row">
-<b>#${x.id} — ৳${Number(x.amount).toFixed(2)}</b>
-<div class="small">
-ইউজার: ${esc(x.first_name)} (@${esc(x.username)})<br>
-ID: ${esc(x.user_id)}<br>
-মাধ্যম: ${esc(x.method)}<br>
-নম্বর: ${esc(x.account)}<br>
-তারিখ: ${esc(x.created_at)}
+<strong>উত্তোলন #${Number(w.id)} · ${money(w.amount)}</strong>
+<div class="muted">
+ইউজার: ${esc(w.first_name||w.username||"নাম নেই")}<br>
+ID: ${Number(w.user_id)}<br>
+মাধ্যম: ${esc(w.method)}<br>
+নম্বর: ${esc(w.account)}<br>
+তারিখ: ${esc(w.created_at||"")}
 </div>
-<div class="actions">
-<button class="ok" onclick="action(${x.id},'approve')">Approve</button>
-<button class="danger" onclick="action(${x.id},'reject')">Reject</button>
+<div class="btnrow" style="margin-top:9px">
+<button class="success" onclick="withdrawAction(${Number(w.id)},'approve')">Approve</button>
+<button class="danger" onclick="withdrawAction(${Number(w.id)},'reject')">Reject</button>
 </div>
-</div>`).join("");
+</div>
+`).join("");
+
+}catch(e){
+$("withdrawList").textContent=e.message;
+msg(e.message);
+}
 }
 
-async function action(id,a){
-if(!confirm(`#${id} অনুরোধটি ${a==="approve"?"Paid হিসেবে চিহ্নিত":"বাতিল ও ব্যালেন্স ফেরত"} করতে চাও?`))return;
+async function withdrawAction(id,action){
+const q=action==="approve"
+?"এই উত্তোলন Paid হিসেবে চিহ্নিত করবেন?"
+:"উত্তোলন বাতিল করে টাকা ফেরত দেবেন?";
+
+if(!confirm(q))return;
+
 try{
-await api("/api/admin/withdrawal/action","POST",{id,action:a});
-msg("কাজটি সম্পন্ন হয়েছে।");
-await load();
-}catch(e){msg(e.message);}
+const d=await api("/api/admin/withdrawal/action","POST",{id,action});
+msg(d.message||"কাজ সম্পন্ন হয়েছে।");
+await loadWithdrawals();
+await loadSummary();
+}catch(e){msg(e.message)}
 }
 
-async function saveSettings(){
-const p={
-reward_amount:document.getElementById("reward").value,
-daily_limit:document.getElementById("limit").value,
-min_withdraw:document.getElementById("minimum").value
+function colorInput(id,value){
+$(id).value=/^#[0-9a-fA-F]{6}$/.test(value||"")?value:"#888888";
+}
+
+function makeLabelFields(labels){
+$("labelFields").innerHTML=LABELS.map(([key,title])=>`
+<div>
+<label>${title}</label>
+<input id="label_${key}" maxlength="60" value="${esc(labels?.[key]||title)}">
+</div>
+`).join("");
+}
+
+function makeOrderList(order,visibility){
+$("orderList").innerHTML=order.map((key,index)=>{
+const title=SECTIONS.find(x=>x[0]===key)?.[1]||key;
+return `<div class="sectionitem" data-key="${key}">
+<div><b>${title}</b><div class="muted">${key}</div></div>
+<div class="controls">
+<input type="checkbox" class="visibleCheck" ${visibility[key]!==false?"checked":""} title="দেখাবে">
+<button class="secondary" onclick="moveSection('${key}',-1)">↑</button>
+<button class="secondary" onclick="moveSection('${key}',1)">↓</button>
+</div>
+</div>`;
+}).join("");
+}
+
+function moveSection(key,dir){
+const list=$("orderList");
+const items=[...list.querySelectorAll(".sectionitem")];
+const index=items.findIndex(x=>x.dataset.key===key);
+const target=index+dir;
+
+if(target<0||target>=items.length)return;
+
+if(dir<0)list.insertBefore(items[index],items[target]);
+else list.insertBefore(items[target],items[index]);
+}
+
+async function loadDesign(){
+try{
+const d=await api("/api/admin/design");
+design=d.design;
+
+$("appName").value=design.app_name||"AdEarn";
+$("headerText").value=design.header_text||"";
+$("footerText").value=design.footer_text||"";
+$("theme").value=design.theme||"dark";
+
+const c=design.colors||{};
+colorInput("colorBackground",c.background);
+colorInput("colorCard",c.card);
+colorInput("colorButton",c.button);
+colorInput("colorText",c.text);
+colorInput("colorBorder",c.border);
+colorInput("colorMuted",c.muted);
+colorInput("colorAccent",c.accent);
+
+makeLabelFields(design.labels||{});
+makeOrderList(design.order||SECTIONS.map(x=>x[0]),design.visibility||{});
+
+previewDesign();
+msg("ডিজাইন সেটিংস লোড হয়েছে।");
+
+}catch(e){msg(e.message)}
+}
+
+function getOrder(){
+return [...$("orderList").querySelectorAll(".sectionitem")].map(x=>x.dataset.key);
+}
+
+function getVisibility(){
+const v={};
+$("orderList").querySelectorAll(".sectionitem").forEach(x=>{
+v[x.dataset.key]=x.querySelector(".visibleCheck").checked;
+});
+return v;
+}
+
+function getColors(){
+return {
+background:$("colorBackground").value,
+card:$("colorCard").value,
+button:$("colorButton").value,
+text:$("colorText").value,
+border:$("colorBorder").value,
+muted:$("colorMuted").value,
+accent:$("colorAccent").value
 };
-try{
-await api("/api/admin/settings","POST",p);
-msg("সেটিংস সংরক্ষণ হয়েছে।");
-await load();
-}catch(e){msg(e.message);}
 }
 
-load();
+function getLabels(){
+const result={};
+LABELS.forEach(([key])=>{
+result[key]=$("label_"+key).value.trim();
+});
+return result;
+}
+
+function previewDesign(){
+const c=getColors();
+$("designPreview").style.background=c.background;
+$("designPreview").style.color=c.text;
+$("designPreview").style.borderColor=c.border;
+$("previewButton").style.background=c.button;
+$("previewButton").style.color=c.text;
+$("previewApp").textContent=$("appName").value||"AdEarn";
+$("previewButton").textContent=$("label_ads")?.value||"নমুনা বাটন";
+}
+
+async function saveDesign(){
+try{
+const order=getOrder();
+const visibility=getVisibility();
+const labels=getLabels();
+
+if(order.length!==8||new Set(order).size!==8){
+throw Error("সব ৮টি সেকশন ঠিকভাবে সাজানো থাকতে হবে।");
+}
+
+if(Object.values(labels).some(x=>!x||x.length>60)){
+throw Error("প্রতিটি নাম ১ থেকে ৬০ অক্ষরের মধ্যে দিন।");
+}
+
+const data={
+theme:$("theme").value,
+app_name:$("appName").value.trim(),
+header_text:$("headerText").value.trim(),
+footer_text:$("footerText").value.trim(),
+colors:getColors(),
+labels,
+order,
+visibility
+};
+
+const d=await api("/api/admin/design","POST",data);
+design=d.design||data;
+msg(d.message||"ডিজাইন সংরক্ষণ হয়েছে।");
+previewDesign();
+
+}catch(e){msg(e.message)}
+}
+
+async function refreshAll(){
+msg("তথ্য আপডেট হচ্ছে...");
+await loadSummary();
+await loadUsers(true);
+await loadWithdrawals();
+msg("রিফ্রেশ সম্পন্ন হয়েছে।");
+}
+
+$("userSearch").addEventListener("keydown",e=>{
+if(e.key==="Enter")loadUsers(true);
+});
+
+loadSummary();
+loadUsers(true);
+loadWithdrawals();
 </script>
 </body>
 </html>
