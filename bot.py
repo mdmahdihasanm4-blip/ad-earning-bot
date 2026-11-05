@@ -266,6 +266,57 @@ def admin_summary():
                         "min_withdraw":float(setting("min_withdraw","50"))}})
     finally: conn.close()
 
+
+@app.route("/api/admin/users", methods=["GET", "OPTIONS"])
+def admin_users():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    if not verified_admin():
+        return jsonify({"error": "অ্যাডমিন অনুমতি নেই"}), 403
+
+    q = str(request.args.get("q", "")).strip()[:100]
+
+    try:
+        limit = max(1, min(int(request.args.get("limit", 100)), 200))
+        offset = max(0, int(request.args.get("offset", 0)))
+    except (TypeError, ValueError):
+        return jsonify({"error": "ভুল limit বা offset"}), 400
+
+    conn = db()
+    try:
+        where = ""
+        params = []
+
+        if q:
+            if q.isdigit():
+                where = "WHERE CAST(user_id AS TEXT) LIKE ?"
+                params.append("%" + q + "%")
+            else:
+                where = "WHERE username LIKE ? OR first_name LIKE ?"
+                params.extend(["%" + q + "%", "%" + q + "%"])
+
+        total = conn.execute(
+            "SELECT COUNT(*) n FROM users " + where, params
+        ).fetchone()["n"]
+
+        rows = conn.execute(
+            """SELECT user_id, COALESCE(username,'') username,
+            COALESCE(first_name,'') first_name,
+            COALESCE(balance,0) balance,
+            COALESCE(joined_at,'') joined_at
+            FROM users """ + where +
+            " ORDER BY joined_at DESC LIMIT ? OFFSET ?",
+            params + [limit, offset]
+        ).fetchall()
+
+        return jsonify({
+            "total": total,
+            "items": [dict(row) for row in rows]
+        })
+    finally:
+        conn.close()
+
 @app.route("/api/admin/withdrawals",methods=["GET","OPTIONS"])
 def admin_withdrawals():
     if request.method=="OPTIONS": return "",204
