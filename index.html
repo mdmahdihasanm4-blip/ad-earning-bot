@@ -1,387 +1,465 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="bn">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#100b20">
 <title>AdEarn</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://libtl.com/sdk.js" data-zone="12185380" data-sdk="show_12185380"></script>
-
 <style>
+:root{--bg:#100b20;--card:#1b1430;--text:#f8f4ff;--muted:#a99cbd;--accent:#a855f7;--border:#382653;--green:#38d9a9;--yellow:#ffd166;--red:#ff718d}
 *{box-sizing:border-box}
-:root{
---bg:#071522;--card:#1b3044;--text:#fff;
---button:#16a875;--border:#29485a;--muted:#aab8ca;
-}
-body{margin:0;padding:18px;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh}
-.app{max-width:480px;margin:auto}
-.header{font-size:28px;font-weight:bold;color:var(--button);margin:12px 0 22px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 8px 25px #0003}
-.muted{color:var(--muted);font-size:14px}
-.balance{font-size:35px;font-weight:bold;margin-top:8px;color:var(--button)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-button{border:1px solid var(--border);border-radius:13px;padding:17px 8px;background:var(--card);color:var(--text);font-size:15px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}
-button:active{transform:scale(.98)}
-.primary{background:var(--button);color:#fff;width:100%;border:0}
+body{margin:0;background:radial-gradient(ellipse at 50% -15%,#42206a,transparent 42%),var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif;padding:0 0 85px}
+.app{width:min(100%,490px);margin:auto;padding:17px 15px}
+.top{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 19px}
+.brand{display:flex;align-items:center;gap:10px}
+.avatar{width:44px;height:44px;border-radius:15px;object-fit:cover;background:#7136b2}
+.brandname{font-size:19px;font-weight:850}
+.sub,.muted{color:var(--muted);font-size:12px;line-height:1.6}
+.online{font-size:11px;color:#83f5cb;background:#123a35;border:1px solid #236c5d;border-radius:30px;padding:7px 10px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px}
 .section{display:none}
 .section.active{display:block}
-input,select{width:100%;padding:14px;margin:8px 0 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:16px}
-.back{background:#34465c;margin-bottom:14px}
-#message,#adMessage,#withdrawMessage{margin-top:14px;color:#ffd477;font-size:14px;line-height:1.5}
-.footer{text-align:center;color:var(--muted);font-size:12px;margin:25px 0}
-.history-item{border-top:1px solid var(--border);padding:12px 0;line-height:1.8;font-size:14px}
-.status-pending{color:#ffd477}
-.status-paid{color:#49e6ae}
-.status-rejected{color:#ff8585}
+.welcome{font-size:13px;color:var(--muted);margin:0 2px 12px}
+.card{background:linear-gradient(145deg,#25183d,#1a1430);border:1px solid var(--border);border-radius:21px;padding:17px;margin-bottom:12px;box-shadow:0 10px 30px #0003}
+.hero{background:linear-gradient(125deg,#54258c,#29164c 70%,#1e1537);border-color:#9b5be877}
+.eyebrow{font-size:12px;color:#e0c9ff}
+.amount{font-size:34px;font-weight:900;margin:6px 0}
+.meta{display:flex;justify-content:space-between;font-size:11px;color:#e5d5fa;margin-top:14px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+.btn{border:1px solid var(--border);border-radius:14px;padding:12px 9px;background:#251b40;color:var(--text);font-size:13px;font-weight:750}
+.primary{background:linear-gradient(135deg,var(--accent),#6d28d9);border:0;color:white}
+.full{width:100%;padding:14px}
+.btn:disabled{opacity:.5}
+.heading{font-size:15px;font-weight:800;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.stat{background:#120d22;border:1px solid var(--border);border-radius:14px;padding:12px}
+.statlabel{font-size:11px;color:var(--muted)}
+.statval{font-size:19px;font-weight:850;margin-top:5px}
+.progress{height:7px;background:#ffffff18;border-radius:10px;margin-top:10px;overflow:hidden}
+.progress span{display:block;height:100%;background:linear-gradient(90deg,#c084fc,#7c3aed);width:0}
+input,select{width:100%;border:1px solid var(--border);border-radius:11px;background:#120d22;color:var(--text);padding:13px;margin:6px 0 13px;font:inherit}
+label{font-size:12px;color:#d6c9e8}
+.message{font-size:12px;color:var(--yellow);line-height:1.6;margin-top:9px;min-height:16px}
+.status{display:inline-block;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:750;background:#ffffff12}
+.pending{color:var(--yellow)}
+.paid{color:var(--green)}
+.rejected{color:var(--red)}
+.history{padding:12px 0;border-top:1px solid var(--border);font-size:12px;line-height:1.9}
+.history:first-child{border:0}
+.link{overflow-wrap:anywhere;color:#d8b9ff;background:#120d22;border:1px dashed #7445a0;padding:12px;border-radius:11px;margin:10px 0;font-size:11px}
+.nav{position:fixed;z-index:5;bottom:0;left:0;right:0;padding:9px 12px calc(9px + env(safe-area-inset-bottom));background:#130d22ed;backdrop-filter:blur(18px);border-top:1px solid #4a3265}
+.navin{width:min(100%,490px);margin:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.navbtn{border:0;background:transparent;color:var(--muted);border-radius:12px;padding:7px 2px;font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px}
+.navbtn b{font-size:19px}
+.navbtn.active{color:#e7caff;background:#6e35a52b}
+.footer{text-align:center;color:#796b8e;font-size:10px;margin:20px 0}
 </style>
 </head>
-
 <body>
 <div class="app">
+<header class="top">
+<div class="brand">
+<img id="avatar" class="avatar" alt="Profile" src="https://dummyimage.com/90x90/7c3aed/fff&text=A">
+<div>
+<div id="appName" class="brandname">AdEarn</div>
+<div id="headerText" class="sub">বিজ্ঞাপন দেখে আয় করুন</div>
+</div>
+</div>
+<div class="online"><i class="dot"></i>অনলাইন</div>
+</header>
 
-<div class="header" id="appHeader">🎬 AdEarn</div>
+<p class="welcome">স্বাগতম, <b id="username">বন্ধু</b> 👋</p>
+<div id="globalMessage" class="message"></div>
+
+<main>
+<section id="home" class="section active">
+<div class="card hero">
+<div class="eyebrow">💜 তোমার মোট ব্যালেন্স</div>
+<div class="amount" id="balance">৳0.00</div>
+<div class="sub">BDT · AdEarn Wallet</div>
+<div class="meta">
+<span>মোট উত্তোলন <b id="totalWithdrawn">৳0.00</b></span>
+<span>রেফারেল <b id="refCount">0</b></span>
+</div>
+</div>
+
+<div class="actions">
+<button class="btn primary" onclick="go('ads')">▶️ বিজ্ঞাপন দেখুন</button>
+<button class="btn" onclick="go('wallet')">↗️ টাকা তুলুন</button>
+</div>
 
 <div class="card">
-<div class="muted"><span id="welcomeText">স্বাগতম,</span> <span id="username">বন্ধু</span>!</div>
-<div class="muted" style="margin-top:18px">তোমার মোট ব্যালেন্স</div>
-<div class="balance" id="balance">৳0.00</div>
-<div class="muted">BDT</div>
+<div class="heading">📊 আজকের অগ্রগতি <span class="muted" id="progressText">0 / 20</span></div>
+<div class="stats">
+<div class="stat">
+<div class="statlabel">আজ দেখেছ</div>
+<div class="statval" id="adsWatched">0</div>
+</div>
+<div class="stat">
+<div class="statlabel">প্রতি বিজ্ঞাপনে</div>
+<div class="statval" id="reward">৳10</div>
+</div>
+</div>
+<div class="progress"><span id="progress"></span></div>
 </div>
 
-<div id="home" class="section active">
-<div class="grid" id="homeButtons">
-<button data-section="ads" onclick="showSection('ads')">📺 Watch Ads</button>
-<button data-section="balancePage" onclick="showSection('balancePage')">💰 My Balance</button>
-<button data-section="referral" onclick="showSection('referral')">👥 Refer &amp; Earn</button>
-<button data-section="withdraw" onclick="showSection('withdraw')">💳 Withdraw</button>
-<button data-section="withdrawHistory" onclick="showSection('withdrawHistory')">📜 উত্তোলনের ইতিহাস</button>
-<button data-section="statistics" onclick="showSection('statistics')">📊 Statistics</button>
-<button data-section="profile" onclick="showSection('profile')">👤 My Profile</button>
-</div>
+<div class="card">
+<div class="heading">💸 সর্বশেষ উত্তোলন</div>
+<div id="latest" class="muted">এখনো কোনো উত্তোলন নেই</div>
+<button class="btn full" style="margin-top:10px" onclick="go('history')">উত্তোলনের ইতিহাস দেখুন</button>
 </div>
 
-<div id="ads" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>📺 বিজ্ঞাপন দেখো</h3>
-<p class="muted">প্রতি সফল বিজ্ঞাপনে <b id="rewardText">৳10</b> পুরস্কার।</p>
-<button id="watchButton" class="primary" onclick="watchAd()">বিজ্ঞাপন দেখুন</button>
-<p id="adMessage"></p>
+<div class="card">
+<div class="heading">🎁 বন্ধু আমন্ত্রণ</div>
+<div class="muted">রেফারেল লিংক শেয়ার করে বন্ধুদের আমন্ত্রণ জানাও।</div>
+<button class="btn full" style="margin-top:10px" onclick="go('referral')">রেফারেল লিংক দেখুন</button>
 </div>
+</section>
 
-<div id="balancePage" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>💰 My Balance</h3>
-<div class="balance" id="balance2">৳0.00</div>
-<p class="muted">তোমার বর্তমান ব্যালেন্স।</p>
+<section id="ads" class="section">
+<div class="card">
+<div class="heading">📺 বিজ্ঞাপন <span id="adBadge" class="status pending">0 / 20</span></div>
+<p class="muted">প্রতি সফল বিজ্ঞাপনে <b id="adReward">৳10</b> যোগ হবে।</p>
+<div class="stat">
+<div class="statlabel">আজকের বাকি বিজ্ঞাপন</div>
+<div class="statval" id="remaining">20</div>
 </div>
-
-<div id="referral" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>👥 Refer &amp; Earn</h3>
-<p class="muted">তোমার রেফারেল লিংক</p>
-<input id="refLink" readonly placeholder="রেফারেল লিংক">
-<button class="primary" onclick="copyReferral()">লিংক কপি</button>
+<button id="watch" class="btn primary full" style="margin-top:14px" onclick="watchAd()">▶️ বিজ্ঞাপন শুরু করুন</button>
+<div id="adMessage" class="message"></div>
 </div>
+</section>
 
-<div id="withdraw" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>💳 টাকা উত্তোলন</h3>
+<section id="wallet" class="section">
+<div class="card hero">
+<div class="eyebrow">💜 বর্তমান ব্যালেন্স</div>
+<div class="amount" id="walletBalance">৳0.00</div>
+<div class="sub">BDT</div>
+</div>
+<div class="card">
+<div class="heading">💳 টাকা উত্তোলন</div>
 <label>পেমেন্ট মাধ্যম</label>
 <select id="method">
 <option value="bKash">বিকাশ</option>
 <option value="Nagad">নগদ</option>
 </select>
 <label>মোবাইল নম্বর</label>
-<input id="phone" placeholder="01XXXXXXXXX" inputmode="numeric">
+<input id="phone" inputmode="numeric" placeholder="01XXXXXXXXX">
 <label>টাকার পরিমাণ</label>
-<input id="amount" type="number" placeholder="যেমন: 100" min="1">
-<button class="primary" id="withdrawButton" onclick="submitWithdraw()">উত্তোলনের আবেদন</button>
-<p id="withdrawMessage"></p>
+<input id="amountInput" type="number" min="1" step=".01" placeholder="যেমন: 100">
+<button id="withdrawBtn" class="btn primary full" onclick="withdraw()">উত্তোলনের আবেদন করুন</button>
+<div id="withdrawMessage" class="message"></div>
+<p class="muted">ন্যূনতম উত্তোলন: <b id="minimum">৳50</b></p>
+</div>
+</section>
+
+<section id="history" class="section">
+<div class="card">
+<div class="heading">📜 উত্তোলনের ইতিহাস <button class="btn" style="float:right;padding:5px 9px" onclick="loadHistory()">↻</button></div>
+<div id="historyList" class="muted">লোড হচ্ছে...</div>
+</div>
+</section>
+
+<section id="referral" class="section">
+<div class="card">
+<div class="heading">🎁 রেফারেল</div>
+<div class="stat">
+<div class="statlabel">মোট রেফারেল</div>
+<div class="statval" id="referrals">0</div>
+</div>
+<p class="muted">নিচের লিংকটি বন্ধুদের সঙ্গে শেয়ার করো।</p>
+<div id="refLink" class="link">লোড হচ্ছে...</div>
+<button class="btn primary full" onclick="copyLink()">লিংক কপি করো</button>
+</div>
+</section>
+
+<section id="profile" class="section">
+<div class="card">
+<div class="heading">👤 আমার প্রোফাইল</div>
+<div class="stat">
+<div class="statlabel">নাম</div>
+<div class="statval" id="profileName">বন্ধু</div>
+</div>
+<p class="muted" id="profileId"></p>
+</div>
+</section>
+</main>
+
+<div id="footerText" class="footer">AdEarn · নিরাপদ আয় অভিজ্ঞতা</div>
 </div>
 
-<div id="withdrawHistory" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>📜 উত্তোলনের ইতিহাস</h3>
-<div id="withdrawHistoryList" class="muted">লোড হচ্ছে...</div>
-<button onclick="loadWithdrawals()">🔄 রিফ্রেশ</button>
+<nav class="nav">
+<div class="navin">
+<button class="navbtn active" data-nav="home" onclick="go('home')"><b>⌂</b>হোম</button>
+<button class="navbtn" data-nav="ads" onclick="go('ads')"><b>▶</b>বিজ্ঞাপন</button>
+<button class="navbtn" data-nav="wallet" onclick="go('wallet')"><b>◈</b>ওয়ালেট</button>
+<button class="navbtn" data-nav="history" onclick="go('history')"><b>▤</b>ইতিহাস</button>
 </div>
-
-<div id="statistics" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>📊 Statistics</h3>
-<p>আজ সফল বিজ্ঞাপন: <b id="adsWatched">0</b></p>
-<p>রেফারেল: <b id="referrals">0</b></p>
-<p>দৈনিক সীমা: <b id="dailyLimit">0</b></p>
-</div>
-
-<div id="profile" class="section card">
-<button class="back" onclick="showSection('home')">← ফিরে যাও</button>
-<h3>👤 My Profile</h3>
-<p id="profileName">Telegram account</p>
-<p class="muted">AdEarn Member</p>
-</div>
-
-<div id="message"></div>
-<div class="footer" id="appFooter">AdEarn · Secure rewards experience</div>
-</div>
+</nav>
 
 <script>
 const tg=window.Telegram?.WebApp;
 tg?.ready();
 tg?.expand();
 
+const API="https://ad-earning-bot.fadehost.app";
+const $=id=>document.getElementById(id);
 const user=tg?.initDataUnsafe?.user;
+let dataNow=null,busyAd=false,busyWithdraw=false;
+
 if(user){
-document.getElementById("username").textContent=user.first_name||"বন্ধু";
-document.getElementById("profileName").textContent="Telegram account: "+(user.first_name||"User");
+$("username").textContent=user.first_name||"বন্ধু";
+$("profileName").textContent=[user.first_name,user.last_name].filter(Boolean).join(" ")||"বন্ধু";
+$("profileId").textContent="Telegram ID: "+user.id;
+if(user.photo_url)$("avatar").src=user.photo_url;
 }
-
-const API_BASE="https://ad-earning-bot.fadehost.app";
-let adRunning=false;
-let withdrawRunning=false;
-
-const sectionMap={
-home:"home",ads:"ads",balance:"balancePage",
-referral:"referral",withdraw:"withdraw",
-withdrawHistory:"withdrawHistory",
-statistics:"statistics",profile:"profile"
-};
-
-const defaultLabels={
-home:"হোম",ads:"বিজ্ঞাপন দেখুন",balance:"ব্যালেন্স",
-referral:"রেফার",withdraw:"টাকা উত্তোলন",
-withdrawHistory:"উত্তোলনের ইতিহাস",
-statistics:"পরিসংখ্যান",profile:"প্রোফাইল"
-};
 
 async function api(path,method="GET",body=null){
-const initData=tg?.initData||"";
-if(!initData)throw new Error("Telegram-এর ভিতর থেকে অ্যাপটি খুলুন।");
+const init=tg?.initData||"";
+if(!init)throw Error("Telegram বটের ভেতর থেকে Mini App খুলুন।");
 
-const options={
-method,
-headers:{"X-Telegram-Init-Data":initData}
-};
+const opt={method,headers:{"X-Telegram-Init-Data":init}};
+
 if(body!==null){
-options.headers["Content-Type"]="application/json";
-options.body=JSON.stringify(body);
+opt.headers["Content-Type"]="application/json";
+opt.body=JSON.stringify(body);
 }
 
-let response;
-try{response=await fetch(API_BASE+path,options);}
-catch(e){throw new Error("সার্ভারের সঙ্গে সংযোগ হচ্ছে না। আবার চেষ্টা করুন।");}
-
-let data;
-try{data=await response.json();}
-catch(e){throw new Error("সার্ভার থেকে সঠিক উত্তর পাওয়া যায়নি।");}
-
-if(!response.ok)throw new Error(data.error||"অনুরোধ সফল হয়নি");
-return data;
+let r;
+try{
+r=await fetch(API+path,opt);
+}catch(e){
+throw Error("সার্ভারের সঙ্গে সংযোগ হচ্ছে না।");
 }
 
-function showSection(id){
-document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-const section=document.getElementById(id);
-if(section)section.classList.add("active");
+let d;
+try{
+d=await r.json();
+}catch(e){
+throw Error("সার্ভার থেকে সঠিক উত্তর পাওয়া যায়নি।");
+}
+
+if(!r.ok)throw Error(d.error||"অনুরোধ সফল হয়নি");
+return d;
+}
+
+function go(id){
+document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.id===id));
+document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.nav===id));
+
+if(id==="history")loadHistory();
+if(id==="wallet")$("walletBalance").textContent="৳"+Number(dataNow?.balance||0).toFixed(2);
+
 loadAccount();
-if(id==="withdrawHistory")loadWithdrawals();
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function status(s){
+return ({
+pending:["অপেক্ষমাণ","pending"],
+paid:["সফল / পরিশোধিত","paid"],
+rejected:["বাতিল","rejected"]
+})[s]||["তথ্য নেই",""];
 }
 
 async function loadDesign(){
 try{
-const response=await api("/api/design");
-const d=response.design;
+const d=(await api("/api/design")).design;
 if(!d)return;
 
 const c=d.colors||{};
 const root=document.documentElement;
 
-if(c.background)root.style.setProperty("--bg",c.background);
-if(c.card)root.style.setProperty("--card",c.card);
-if(c.text)root.style.setProperty("--text",c.text);
-if(c.button)root.style.setProperty("--button",c.button);
-if(c.border)root.style.setProperty("--border",c.border);
-if(c.muted)root.style.setProperty("--muted",c.muted);
+for(const [k,v] of Object.entries({
+background:"--bg",
+card:"--card",
+text:"--text",
+button:"--accent",
+border:"--border",
+muted:"--muted"
+})){
+if(c[k])root.style.setProperty(v,c[k]);
+}
 
 if(d.app_name){
+$("appName").textContent=d.app_name;
 document.title=d.app_name;
-document.getElementById("appHeader").textContent="🎬 "+d.app_name;
-}
-if(d.header_text){
-document.getElementById("welcomeText").textContent=d.header_text;
-}
-if(d.footer_text){
-document.getElementById("appFooter").textContent=d.footer_text;
 }
 
-const labels={...defaultLabels,...(d.labels||{})};
-
-document.querySelectorAll("[data-section]").forEach(button=>{
-const key=button.dataset.section;
-const label=labels[key==="balancePage"?"balance":key];
-if(label)button.textContent=label;
-});
-
-const order=Array.isArray(d.order)?d.order:[];
-const buttons=document.getElementById("homeButtons");
-const buttonByKey={};
-buttons.querySelectorAll("[data-section]").forEach(b=>{
-buttonByKey[b.dataset.section]=b;
-});
-
-order.forEach(key=>{
-const id=sectionMap[key];
-const b=buttonByKey[id];
-if(b)buttons.appendChild(b);
-});
-
-const visibility=d.visibility||{};
-Object.keys(sectionMap).forEach(key=>{
-if(key==="home")return;
-const id=sectionMap[key];
-const b=buttonByKey[id];
-if(b)b.style.display=visibility[key]===false?"none":"";
-});
+if(d.header_text)$("headerText").textContent=d.header_text;
+if(d.footer_text)$("footerText").textContent=d.footer_text;
 
 }catch(e){
-console.log("Design settings unavailable:",e.message);
+console.log("Design load:",e.message);
 }
 }
 
 async function loadAccount(){
 try{
-const data=await api("/api/me");
-const amount=Number(data.balance||0).toFixed(2);
+const d=await api("/api/me");
+dataNow=d;
 
-document.getElementById("balance").textContent="৳"+amount;
-document.getElementById("balance2").textContent="৳"+amount;
-document.getElementById("adsWatched").textContent=data.ads_today||0;
-document.getElementById("referrals").textContent=data.referrals||0;
-document.getElementById("dailyLimit").textContent=data.daily_limit||0;
-document.getElementById("refLink").value=data.referral_link||"";
-document.getElementById("rewardText").textContent="৳"+Number(data.reward_amount||0);
-document.getElementById("message").textContent="";
+const bal="৳"+Number(d.balance||0).toFixed(2);
+$("balance").textContent=bal;
+$("walletBalance").textContent=bal;
+$("totalWithdrawn").textContent="৳"+Number(d.total_withdrawn||0).toFixed(2);
+
+$("adsWatched").textContent=d.ads_today||0;
+$("refCount").textContent=d.referrals||0;
+$("referrals").textContent=d.referrals||0;
+
+$("reward").textContent=$("adReward").textContent="৳"+Number(d.reward_amount||0);
+
+const lim=Number(d.daily_limit||0);
+const done=Number(d.ads_today||0);
+const left=Math.max(0,lim-done);
+
+$("progressText").textContent=$("adBadge").textContent=done+" / "+lim;
+$("remaining").textContent=left;
+$("progress").style.width=(lim?Math.min(100,done/lim*100):0)+"%";
+
+$("refLink").textContent=d.referral_link||"লিংক পাওয়া যায়নি";
+$("minimum").textContent="৳"+Number(d.min_withdraw||0);
+
+$("latest").innerHTML=d.latest_withdrawal_status
+?`সর্বশেষ আবেদন: <span class="status ${status(d.latest_withdrawal_status)[1]}">${status(d.latest_withdrawal_status)[0]}</span>`
+:"এখনো কোনো উত্তোলন নেই";
+
+$("globalMessage").textContent="";
+
 }catch(e){
-document.getElementById("message").textContent=e.message;
+$("globalMessage").textContent=e.message;
 }
 }
 
 async function watchAd(){
-if(adRunning)return;
-const msg=document.getElementById("adMessage");
-const button=document.getElementById("watchButton");
-adRunning=true;
-button.disabled=true;
-msg.textContent="বিজ্ঞাপন চালু হচ্ছে...";
+if(busyAd)return;
+
+busyAd=true;
+$("watch").disabled=true;
+$("adMessage").textContent="বিজ্ঞাপন চালু হচ্ছে...";
 
 try{
 if(typeof window.show_12185380!=="function"){
-throw new Error("Monetag SDK লোড হয়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।");
+throw Error("Monetag SDK লোড হয়নি। পেজ রিফ্রেশ করে চেষ্টা করুন।");
 }
-const session=await api("/api/ad/start","POST",{});
-if(!session.ymid)throw new Error("বিজ্ঞাপন সেশন তৈরি হয়নি।");
+
+const s=await api("/api/ad/start","POST",{});
+if(!s.ymid)throw Error("বিজ্ঞাপন সেশন তৈরি হয়নি।");
 
 await window.show_12185380({
-ymid:session.ymid,
+ymid:s.ymid,
 requestVar:"watch_ads"
 });
 
-msg.textContent="বিজ্ঞাপন শেষ হয়েছে। সার্ভার যাচাই করলে পুরস্কার যোগ হবে।";
+$("adMessage").textContent="বিজ্ঞাপন শেষ হয়েছে। সার্ভার যাচাই করলে পুরস্কার যোগ হবে।";
+
 setTimeout(loadAccount,3000);
 setTimeout(loadAccount,8000);
 setTimeout(loadAccount,15000);
+
 }catch(e){
-msg.textContent=e.message||"বিজ্ঞাপন চালু করা যায়নি।";
+$("adMessage").textContent=e.message;
 }finally{
-adRunning=false;
-button.disabled=false;
+busyAd=false;
+$("watch").disabled=false;
 }
 }
 
-async function submitWithdraw(){
-if(withdrawRunning)return;
-const msg=document.getElementById("withdrawMessage");
-const button=document.getElementById("withdrawButton");
-const method=document.getElementById("method").value;
-const phone=document.getElementById("phone").value.trim();
-const amount=Number(document.getElementById("amount").value);
+async function withdraw(){
+if(busyWithdraw)return;
+
+const phone=$("phone").value.trim();
+const amount=Number($("amountInput").value);
+const method=$("method").value;
 
 if(!/^01[3-9]\d{8}$/.test(phone)){
-msg.textContent="সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দাও।";
+$("withdrawMessage").textContent="সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দিন।";
 return;
 }
+
 if(!Number.isFinite(amount)||amount<=0){
-msg.textContent="সঠিক টাকার পরিমাণ লিখো।";
+$("withdrawMessage").textContent="সঠিক টাকার পরিমাণ লিখুন।";
 return;
 }
 
-withdrawRunning=true;
-button.disabled=true;
+busyWithdraw=true;
+$("withdrawBtn").disabled=true;
+
 try{
-const result=await api("/api/withdraw","POST",{method,account:phone,amount});
-msg.textContent=result.message||"আবেদন জমা হয়েছে।";
-document.getElementById("amount").value="";
-document.getElementById("phone").value="";
+const d=await api("/api/withdraw","POST",{
+method,
+account:phone,
+amount
+});
+
+$("withdrawMessage").textContent=d.message||"আবেদন জমা হয়েছে।";
+$("phone").value="";
+$("amountInput").value="";
+
 await loadAccount();
-await loadWithdrawals();
+await loadHistory();
+
 }catch(e){
-msg.textContent=e.message;
+$("withdrawMessage").textContent=e.message;
 }finally{
-withdrawRunning=false;
-button.disabled=false;
+busyWithdraw=false;
+$("withdrawBtn").disabled=false;
 }
 }
 
-async function loadWithdrawals(){
-const box=document.getElementById("withdrawHistoryList");
+async function loadHistory(){
+const box=$("historyList");
 box.textContent="ইতিহাস লোড হচ্ছে...";
+
 try{
-const data=await api("/api/withdrawals?limit=30");
-if(!data.items||data.items.length===0){
-box.textContent="এখনো কোনো উত্তোলনের আবেদন করা হয়নি।";
+const d=await api("/api/withdrawals?limit=30");
+
+if(!d.items?.length){
+box.textContent="এখনো কোনো উত্তোলনের আবেদন নেই।";
 return;
 }
-const labels={pending:"অপেক্ষমাণ",paid:"পরিশোধিত",rejected:"বাতিল"};
-box.innerHTML=data.items.map(x=>{
-const status=x.status||"pending";
-const statusClass={
-pending:"status-pending",paid:"status-paid",rejected:"status-rejected"
-}[status]||"";
-const account=String(x.account||"");
-const masked=account.length>=7?account.slice(0,3)+"****"+account.slice(-4):"নম্বর গোপন";
-return `<div class="history-item">
-<b>#${x.id} · ৳${Number(x.amount||0).toFixed(2)}</b><br>
-মাধ্যম: ${x.method==="bKash"?"বিকাশ":"নগদ"}<br>
-নম্বর: ${masked}<br>
-অবস্থা: <b class="${statusClass}">${labels[status]||status}</b><br>
-তারিখ: ${x.created_at||"—"}
+
+box.innerHTML=d.items.map(x=>{
+const st=status(x.status);
+const a=String(x.account||"");
+const masked=a.length>=7?a.slice(0,3)+"****"+a.slice(-4):"গোপন";
+
+return `<div class="history">
+<b>#${Number(x.id)} · ৳${Number(x.amount||0).toFixed(2)}</b><br>
+${x.method==="bKash"?"বিকাশ":"নগদ"} · ${masked}<br>
+<span class="status ${st[1]}">${st[0]}</span><br>
+<span class="muted">${esc(x.created_at||"")}</span>
 </div>`;
 }).join("");
+
 }catch(e){
-box.textContent=e.message||"ইতিহাস লোড করা যায়নি।";
+box.textContent=e.message;
 }
 }
 
-function copyReferral(){
-const link=document.getElementById("refLink").value;
-if(!link){alert("রেফারেল লিংক এখনো তৈরি হয়নি।");return;}
-if(navigator.clipboard&&window.isSecureContext){
-navigator.clipboard.writeText(link)
-.then(()=>alert("লিংক কপি হয়েছে!"))
-.catch(()=>fallbackCopy(link));
-}else{fallbackCopy(link);}
+function esc(s){
+return String(s??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#39;"
+}[c]));
 }
 
-function fallbackCopy(link){
-const input=document.getElementById("refLink");
-input.value=link;
-input.select();
+async function copyLink(){
+const link=$("refLink").textContent;
+
+if(!link||link==="লোড হচ্ছে..."||link==="লিংক পাওয়া যায়নি")return;
+
 try{
-document.execCommand("copy");
-alert("লিংক কপি হয়েছে!");
-}catch(e){alert("লিংক কপি করা যায়নি।");}
+await navigator.clipboard.writeText(link);
+$("globalMessage").textContent="রেফারেল লিংক কপি হয়েছে।";
+}catch(e){
+$("globalMessage").textContent="লিংক কপি করা যায়নি; লিংকটি চেপে ধরে কপি করুন।";
+}
 }
 
 loadDesign();
