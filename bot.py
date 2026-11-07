@@ -23,8 +23,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN", "")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 
-WEB_URL = "https://mdmahdihasanm4-blip.github.io/ad-earning-bot/"
-WEB_ORIGIN = "https://mdmahdihasanm4-blip.github.io"
+WEB_URL = "https://github.io"
+WEB_ORIGIN = "https://github.io"
 
 PORT = int(os.getenv("PORT", "8080"))
 
@@ -122,7 +122,6 @@ def init_db():
             )
         """)
 
-        # Default Settings (চাহিদা অনুযায়ী ১, ৪, ৫, ৮, ৯, ১০, ১১, ১২ নং ফিচারের কনফিগারেশন)
         default_buttons = [
             {"id": "ads", "name_bn": "▶ বিজ্ঞাপন দেখুন", "name_en": "▶ Watch Ads", "icon": "📺", "link": "", "position": "home", "order": 1, "active": 1},
             {"id": "withdraw", "name_bn": "↗ টাকা তুলুন", "name_en": "↗ Withdraw", "icon": "💸", "link": "", "position": "home", "order": 2, "active": 1},
@@ -243,7 +242,7 @@ def verify_telegram_data(init_data):
 
 
 # ==================================================
-# FLASK FLUID API CHANNELS
+# FLASK API CHANNELS
 # ==================================================
 
 @app.route("/api/app-config", methods=["GET"])
@@ -277,7 +276,6 @@ def user_data():
     if is_blocked(uid):
         return jsonify({"error": "Banned", "message": "You are blocked by Admin."}), 403
 
-    # Handle Referral Signup
     user_row = get_user(uid)
     if not user_row:
         ref_id = None
@@ -290,3 +288,5 @@ def user_data():
         user_row = get_user(uid)
 
     conn = db()
+    today = today_text()
+    ads_watched = conn.execute(
