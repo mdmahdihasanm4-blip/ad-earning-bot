@@ -1783,6 +1783,38 @@ async def admin_command(
 
 
 # ==================================================
+# ADMIN PANEL COMMAND
+# ==================================================
+
+async def panel_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    user = update.effective_user
+
+    if not user or user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "এই কমান্ড শুধু অ্যাডমিনের জন্য।"
+        )
+        return
+
+    panel_url = WEB_URL.rstrip("/") + "/admin.html"
+
+    keyboard = [[
+        InlineKeyboardButton(
+            "🛠 Admin Panel খুলুন",
+            web_app=WebAppInfo(url=panel_url)
+        )
+    ]]
+
+    await update.message.reply_text(
+        "🛠 AdEarn Admin Panel\n\n"
+        "নিচের বাটনে চাপ দিয়ে অ্যাডমিন প্যানেল খুলুন।",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# ==================================================
 # START SERVER
 # ==================================================
 
@@ -1830,6 +1862,11 @@ def main():
 
     application.add_handler(
         CommandHandler("admin", admin_command)
+    )
+
+    # নতুন /panel কমান্ড
+    application.add_handler(
+        CommandHandler("panel", panel_command)
     )
 
     print("AdEarn Bot is starting...")
