@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#100b20">
-<title>AdEarn Admin Panel</title>
+<title>Earning Bot Admin</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{
- --bg:#100b20;--card:#1b1430;--text:#f8f4ff;
- --muted:#a99cbd;--accent:#a855f7;--border:#382653;
- --green:#20c997;--red:#ef476f;--yellow:#ffd166
+--bg:#100b20;--card:#1b1430;--text:#f8f4ff;
+--muted:#a99cbd;--accent:#a855f7;--border:#382653;
+--green:#20c997;--red:#ef476f;--yellow:#ffd166
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif;padding:16px 13px 40px}
@@ -29,9 +29,10 @@ p{line-height:1.6}
 input,select,button{font:inherit}
 input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:#120d22;color:var(--text);margin:5px 0 12px}
 input[type=color]{height:44px;padding:4px}
+input[type=checkbox]{width:auto;margin:0}
 label{display:block;font-size:12px;color:#d9cbea;margin-top:9px}
 button{border:0;border-radius:10px;padding:11px 13px;background:var(--accent);color:white;font-weight:750;cursor:pointer}
-button:disabled{opacity:.4;cursor:not-allowed}
+button:disabled{opacity:.4}
 .btnrow{display:flex;gap:7px;flex-wrap:wrap}
 .btnrow button{flex:1}
 .secondary{background:#382653}
@@ -40,21 +41,17 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .smallbtn{padding:7px 10px;font-size:11px}
 #message{white-space:pre-wrap;color:var(--yellow);font-size:12px;line-height:1.7;margin:8px 0}
 .row{border-top:1px solid var(--border);padding:12px 0}
-.row:first-child{border-top:0}
 .userline{display:flex;justify-content:space-between;gap:8px;align-items:center}
 .userline strong{font-size:13px;overflow-wrap:anywhere}
 .badge{display:inline-block;border-radius:20px;padding:4px 8px;font-size:10px;background:#ffffff15}
 .blocked{color:#ff8097;background:#632238}
 .active{color:#66e6b8;background:#164a3d}
-.pending{color:#ffd166}
 .search{display:grid;grid-template-columns:1fr 85px;gap:7px}
 .colorgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.check{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:12px}
-.check input{width:auto;margin:0}
-.sectionitem{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--border);padding:9px;border-radius:10px;margin:6px 0;background:#120d22}
-.sectionitem .controls{display:flex;gap:4px;align-items:center}
-.sectionitem button{padding:6px 9px}
-.sectionitem input{width:auto;margin:0}
+.check{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:12px}
+.sectionitem,.buttonitem{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--border);padding:9px;border-radius:10px;margin:6px 0;background:#120d22}
+.controls{display:flex;gap:4px;align-items:center}
+.controls button{padding:6px 9px}
 .preview{border:1px dashed #8062a3;border-radius:13px;padding:13px;margin-top:12px}
 .tabbar{display:flex;gap:6px;overflow:auto;margin:12px 0}
 .tabbar button{white-space:nowrap;background:#25183d}
@@ -69,7 +66,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 
 <header>
 <div>
-<h1>🛠 AdEarn Admin</h1>
+<h1>🛠 Earning Bot</h1>
 <div class="muted">অ্যাডমিন কন্ট্রোল প্যানেল</div>
 </div>
 <button class="smallbtn" onclick="refreshAll()">↻ Refresh</button>
@@ -92,7 +89,6 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <button onclick="showTab('design',this)">🎨 Design</button>
 </div>
 
-<!-- DASHBOARD -->
 <section id="dashboard" class="panel selected">
 <div class="card">
 <h2>📊 সার্ভার ও অ্যাপের তথ্য</h2>
@@ -100,7 +96,6 @@ button:disabled{opacity:.4;cursor:not-allowed}
 </div>
 </section>
 
-<!-- USERS -->
 <section id="users" class="panel">
 <div class="card">
 <h2>👥 ইউজার ম্যানেজমেন্ট</h2>
@@ -117,17 +112,15 @@ button:disabled{opacity:.4;cursor:not-allowed}
 </div>
 </section>
 
-<!-- WITHDRAWALS -->
 <section id="withdrawals" class="panel">
 <div class="card">
 <h2>💸 পেন্ডিং উত্তোলন</h2>
-<div class="muted">Approve করলে Paid হবে। Reject করলে ইউজারের টাকা ফেরত যাবে।</div>
+<div class="muted">Approve করলে Paid হবে। Reject করলে সম্পূর্ণ টাকা ফেরত যাবে।</div>
 <div id="withdrawList">লোড হচ্ছে...</div>
 <button class="secondary" style="width:100%" onclick="loadWithdrawals()">↻ রিফ্রেশ</button>
 </div>
 </section>
 
-<!-- SETTINGS -->
 <section id="settings" class="panel">
 <div class="card">
 <h2>⚙️ অ্যাপ সেটিংস</h2>
@@ -141,15 +134,27 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <label>সর্বনিম্ন উত্তোলন (৳)</label>
 <input id="minWithdraw" type="number" min="1" step=".01">
 
+<label>উত্তোলনের সার্ভিস ফি (%)</label>
+<input id="feePercent" type="number" min="0" max="50" step=".01">
+<div class="muted">০ থেকে ৫০ শতাংশের মধ্যে দিতে পারবে।</div>
+
+<h3>💳 পেমেন্ট মাধ্যম</h3>
+<label class="check">
+<input type="checkbox" id="bkashEnabled">
+বিকাশ চালু রাখুন
+</label>
+<label class="check">
+<input type="checkbox" id="nagadEnabled">
+নগদ চালু রাখুন
+</label>
+
 <button style="width:100%" onclick="saveSettings()">সেটিংস সংরক্ষণ করুন</button>
 </div>
 </section>
 
-<!-- DESIGN -->
 <section id="design" class="panel">
 <div class="card">
 <h2>🎨 অ্যাপ ডিজাইন ম্যানেজার</h2>
-<p class="muted">এখানে পরিবর্তন করলে অ্যাপের ডিজাইনে প্রভাব পড়বে।</p>
 
 <label>অ্যাপের নাম</label>
 <input id="appName" maxlength="60">
@@ -159,6 +164,12 @@ button:disabled{opacity:.4;cursor:not-allowed}
 
 <label>ফুটারের লেখা</label>
 <input id="footerText" maxlength="160">
+
+<label>লোগোর Image URL</label>
+<input id="logoUrl" placeholder="https://example.com/logo.png">
+
+<label>ব্যানারের Image URL</label>
+<input id="bannerUrl" placeholder="https://example.com/banner.png">
 
 <label>থিম</label>
 <select id="theme">
@@ -184,18 +195,40 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <h3>✍️ বাটন ও সেকশনের নাম</h3>
 <div id="labelFields"></div>
 
+<h3>➕ কাস্টম বাটন যোগ করুন</h3>
+<label>বাটনের নাম</label>
+<input id="newButtonName" maxlength="40" placeholder="যেমন: আমাদের গ্রুপ">
+
+<label>বাটনের আইকন</label>
+<input id="newButtonIcon" maxlength="8" placeholder="🔗">
+
+<label>বাটনের লিংক</label>
+<input id="newButtonUrl" placeholder="https://example.com">
+
+<label>বাটনের কাজ</label>
+<select id="newButtonAction">
+<option value="link">লিংক খুলবে</option>
+<option value="ads">বিজ্ঞাপন</option>
+<option value="wallet">ব্যালেন্স</option>
+<option value="history">উত্তোলনের ইতিহাস</option>
+<option value="referral">রেফারেল</option>
+</select>
+
+<button style="width:100%" onclick="addButton()">বাটন যোগ করুন</button>
+<div id="buttonList"></div>
+
 <h3>↕️ সেকশনের অবস্থান ও দেখানো/লুকানো</h3>
-<p class="muted">উপর-নিচের বাটন দিয়ে অবস্থান পরিবর্তন করো। টিক তুলে দিলে সেকশনটি লুকানো হবে।</p>
+<p class="muted">উপর-নিচের বাটন দিয়ে অবস্থান বদলাও। টিক তুলে দিলে সেকশন লুকানো হবে।</p>
 <div id="orderList"></div>
 
 <div class="preview" id="designPreview">
 <b>লাইভ প্রিভিউ</b>
-<p id="previewApp">AdEarn</p>
+<p id="previewApp">Earning Bot</p>
 <button id="previewButton">নমুনা বাটন</button>
 </div>
 
 <div class="btnrow" style="margin-top:14px">
-<button class="secondary" onclick="loadDesign()">রিসেট / রিফ্রেশ</button>
+<button class="secondary" onclick="loadDesign()">রিফ্রেশ</button>
 <button onclick="saveDesign()">ডিজাইন সংরক্ষণ</button>
 </div>
 </div>
@@ -214,43 +247,34 @@ const $=id=>document.getElementById(id);
 let page=0;
 const PAGE_SIZE=50;
 let totalUsers=0;
+let design=null;
+let customButtons=[];
 
 const SECTIONS=[
- ["home","হোম"],
- ["ads","বিজ্ঞাপন"],
- ["balance","ব্যালেন্স"],
- ["referral","রেফারেল"],
- ["withdraw","উত্তোলন"],
- ["withdrawHistory","উত্তোলনের ইতিহাস"],
- ["profile","প্রোফাইল"],
- ["statistics","পরিসংখ্যান"]
+["home","হোম"],
+["ads","বিজ্ঞাপন"],
+["balance","ব্যালেন্স"],
+["referral","রেফারেল"],
+["withdraw","উত্তোলন"],
+["withdrawHistory","উত্তোলনের ইতিহাস"],
+["profile","প্রোফাইল"],
+["statistics","পরিসংখ্যান"]
 ];
 
 const LABELS=[
- ["home","হোম"],
- ["ads","বিজ্ঞাপন"],
- ["balance","ব্যালেন্স"],
- ["referral","রেফারেল"],
- ["withdraw","উত্তোলন"],
- ["withdrawHistory","উত্তোলনের ইতিহাস"],
- ["profile","প্রোফাইল"],
- ["statistics","পরিসংখ্যান"],
- ["appName","অ্যাপের নাম"]
+...SECTIONS,
+["appName","অ্যাপের নাম"]
 ];
 
-let design=null;
-
-function msg(t){
-$("message").textContent=t||"";
-}
+function msg(t){$("message").textContent=t||""}
 
 async function api(path,method="GET",body=null){
 const init=tg?.initData||"";
 if(!init)throw Error("Telegram-এর ভেতর থেকে Admin Panel খুলুন।");
 
 const options={
- method,
- headers:{"X-Telegram-Init-Data":init}
+method,
+headers:{"X-Telegram-Init-Data":init}
 };
 
 if(body!==null){
@@ -259,11 +283,8 @@ options.body=JSON.stringify(body);
 }
 
 let r;
-try{
-r=await fetch(API+path,options);
-}catch(e){
-throw Error("সার্ভারের সঙ্গে সংযোগ হচ্ছে না।");
-}
+try{r=await fetch(API+path,options)}
+catch(e){throw Error("সার্ভারের সঙ্গে সংযোগ হচ্ছে না।")}
 
 let d;
 try{d=await r.json()}
@@ -279,14 +300,11 @@ return String(v??"").replace(/[&<>"']/g,c=>({
 }[c]));
 }
 
-function money(v){
-return "৳"+Number(v||0).toFixed(2);
-}
+function money(v){return "৳"+Number(v||0).toFixed(2)}
 
 function showTab(id,button){
 document.querySelectorAll(".panel").forEach(x=>x.classList.remove("selected"));
 document.querySelectorAll(".tabbar button").forEach(x=>x.classList.remove("selected"));
-
 $(id).classList.add("selected");
 button.classList.add("selected");
 
@@ -316,33 +334,44 @@ if(d.settings){
 $("reward").value=d.settings.reward_amount;
 $("dailyLimit").value=d.settings.daily_limit;
 $("minWithdraw").value=d.settings.min_withdraw;
-}
+$("feePercent").value=d.settings.fee_percent??0;
 
+const methods=d.settings.payment_methods||["bKash","Nagad"];
+$("bkashEnabled").checked=methods.includes("bKash");
+$("nagadEnabled").checked=methods.includes("Nagad");
+}
 }catch(e){msg(e.message)}
 }
 
 async function saveSettings(){
 try{
+const methods=[];
+if($("bkashEnabled").checked)methods.push("bKash");
+if($("nagadEnabled").checked)methods.push("Nagad");
+
+if(!methods.length)throw Error("অন্তত একটি পেমেন্ট মাধ্যম চালু রাখুন।");
+
 const data={
 reward_amount:Number($("reward").value),
 daily_limit:Number($("dailyLimit").value),
-min_withdraw:Number($("minWithdraw").value)
+min_withdraw:Number($("minWithdraw").value),
+fee_percent:Number($("feePercent").value),
+payment_methods:methods
 };
 
-if(data.reward_amount<=0||data.daily_limit<1||data.min_withdraw<1){
+if(data.reward_amount<=0||data.daily_limit<1||data.min_withdraw<1||
+!Number.isFinite(data.fee_percent)||data.fee_percent<0||data.fee_percent>50){
 throw Error("সেটিংসের সঠিক মান লিখুন।");
 }
 
 const d=await api("/api/admin/settings","POST",data);
 msg(d.message||"সেটিংস সংরক্ষণ হয়েছে।");
 await loadSummary();
-
 }catch(e){msg(e.message)}
 }
 
 async function loadUsers(reset=false){
 if(reset)page=0;
-
 $("userList").textContent="ইউজার লোড হচ্ছে...";
 
 try{
@@ -380,7 +409,6 @@ ${blocked?"আনব্লক করুন":"ব্লক করুন"}
 </div>
 </div>`;
 }).join("");
-
 }catch(e){
 $("userList").textContent=e.message;
 msg(e.message);
@@ -388,15 +416,10 @@ msg(e.message);
 }
 
 async function toggleBlock(uid,blocked){
-const action=blocked?"block":"unblock";
-const question=blocked?"এই ইউজারকে ব্লক করতে চান?":"এই ইউজারকে আনব্লক করতে চান?";
-
-if(!confirm(question))return;
-
+if(!confirm(blocked?"এই ইউজারকে ব্লক করতে চান?":"এই ইউজারকে আনব্লক করতে চান?"))return;
 try{
 const d=await api("/api/admin/user/block","POST",{
-user_id:uid,
-action
+user_id:uid,action:blocked?"block":"unblock"
 });
 msg(d.message||"ইউজারের অবস্থা পরিবর্তন হয়েছে।");
 await loadUsers();
@@ -412,10 +435,8 @@ loadUsers();
 
 async function loadWithdrawals(){
 $("withdrawList").textContent="লোড হচ্ছে...";
-
 try{
 const d=await api("/api/admin/withdrawals");
-
 if(!d.items?.length){
 $("withdrawList").textContent="কোনো পেন্ডিং উত্তোলন নেই।";
 return;
@@ -429,15 +450,15 @@ $("withdrawList").innerHTML=d.items.map(w=>`
 ID: ${Number(w.user_id)}<br>
 মাধ্যম: ${esc(w.method)}<br>
 নম্বর: ${esc(w.account)}<br>
+সার্ভিস ফি: ${money(w.fee_amount)}<br>
+ইউজার পাবে: ${money(w.net_amount)}<br>
 তারিখ: ${esc(w.created_at||"")}
 </div>
 <div class="btnrow" style="margin-top:9px">
 <button class="success" onclick="withdrawAction(${Number(w.id)},'approve')">Approve</button>
 <button class="danger" onclick="withdrawAction(${Number(w.id)},'reject')">Reject</button>
 </div>
-</div>
-`).join("");
-
+</div>`).join("");
 }catch(e){
 $("withdrawList").textContent=e.message;
 msg(e.message);
@@ -445,12 +466,8 @@ msg(e.message);
 }
 
 async function withdrawAction(id,action){
-const q=action==="approve"
-?"এই উত্তোলন Paid হিসেবে চিহ্নিত করবেন?"
-:"উত্তোলন বাতিল করে টাকা ফেরত দেবেন?";
-
+const q=action==="approve"?"এই উত্তোলন Paid হিসেবে চিহ্নিত করবেন?":"উত্তোলন বাতিল করে টাকা ফেরত দেবেন?";
 if(!confirm(q))return;
-
 try{
 const d=await api("/api/admin/withdrawal/action","POST",{id,action});
 msg(d.message||"কাজ সম্পন্ন হয়েছে।");
@@ -468,17 +485,16 @@ $("labelFields").innerHTML=LABELS.map(([key,title])=>`
 <div>
 <label>${title}</label>
 <input id="label_${key}" maxlength="60" value="${esc(labels?.[key]||title)}">
-</div>
-`).join("");
+</div>`).join("");
 }
 
 function makeOrderList(order,visibility){
-$("orderList").innerHTML=order.map((key,index)=>{
+$("orderList").innerHTML=order.map(key=>{
 const title=SECTIONS.find(x=>x[0]===key)?.[1]||key;
 return `<div class="sectionitem" data-key="${key}">
 <div><b>${title}</b><div class="muted">${key}</div></div>
 <div class="controls">
-<input type="checkbox" class="visibleCheck" ${visibility[key]!==false?"checked":""} title="দেখাবে">
+<input type="checkbox" class="visibleCheck" ${visibility[key]!==false?"checked":""}>
 <button class="secondary" onclick="moveSection('${key}',-1)">↑</button>
 <button class="secondary" onclick="moveSection('${key}',1)">↓</button>
 </div>
@@ -491,21 +507,74 @@ const list=$("orderList");
 const items=[...list.querySelectorAll(".sectionitem")];
 const index=items.findIndex(x=>x.dataset.key===key);
 const target=index+dir;
-
 if(target<0||target>=items.length)return;
-
 if(dir<0)list.insertBefore(items[index],items[target]);
 else list.insertBefore(items[target],items[index]);
+}
+
+function renderButtons(){
+$("buttonList").innerHTML=customButtons.map((b,i)=>`
+<div class="buttonitem" data-index="${i}">
+<div>
+<strong>${esc(b.icon||"🔗")} ${esc(b.name)}</strong>
+<div class="muted">${esc(b.action)} ${b.url?"· "+esc(b.url):""}</div>
+<label class="check">
+<input type="checkbox" class="buttonVisible" ${b.visible!==false?"checked":""}
+onchange="customButtons[${i}].visible=this.checked">
+দেখাবে
+</label>
+</div>
+<div class="controls">
+<button class="secondary" onclick="moveButton(${i},-1)">↑</button>
+<button class="secondary" onclick="moveButton(${i},1)">↓</button>
+<button class="danger" onclick="removeButton(${i})">×</button>
+</div>
+</div>`).join("");
+}
+
+function addButton(){
+const name=$("newButtonName").value.trim();
+const icon=$("newButtonIcon").value.trim()||"🔗";
+const url=$("newButtonUrl").value.trim();
+const action=$("newButtonAction").value;
+
+if(!name){msg("বাটনের নাম লিখুন।");return}
+if(action==="link"&&!/^https?:\/\/\S+$/i.test(url)){
+msg("সঠিক URL লিখুন।");return;
+}
+if(customButtons.length>=30){msg("সর্বোচ্চ ৩০টি বাটন যোগ করা যাবে।");return}
+
+customButtons.push({name,icon,url,action,visible:true});
+$("newButtonName").value="";
+$("newButtonIcon").value="";
+$("newButtonUrl").value="";
+renderButtons();
+msg("বাটন যোগ হয়েছে। ডিজাইন সংরক্ষণ করুন।");
+}
+
+function removeButton(i){
+if(!confirm("এই বাটনটি মুছে ফেলবেন?"))return;
+customButtons.splice(i,1);
+renderButtons();
+}
+
+function moveButton(i,dir){
+const j=i+dir;
+if(j<0||j>=customButtons.length)return;
+[customButtons[i],customButtons[j]]=[customButtons[j],customButtons[i]];
+renderButtons();
 }
 
 async function loadDesign(){
 try{
 const d=await api("/api/admin/design");
-design=d.design;
+design=d.design||{};
 
-$("appName").value=design.app_name||"AdEarn";
+$("appName").value=design.app_name||"Earning Bot";
 $("headerText").value=design.header_text||"";
 $("footerText").value=design.footer_text||"";
+$("logoUrl").value=design.logo_url||"";
+$("bannerUrl").value=design.banner_url||"";
 $("theme").value=design.theme||"dark";
 
 const c=design.colors||{};
@@ -520,9 +589,10 @@ colorInput("colorAccent",c.accent);
 makeLabelFields(design.labels||{});
 makeOrderList(design.order||SECTIONS.map(x=>x[0]),design.visibility||{});
 
+customButtons=Array.isArray(design.buttons)?design.buttons.slice():[];
+renderButtons();
 previewDesign();
 msg("ডিজাইন সেটিংস লোড হয়েছে।");
-
 }catch(e){msg(e.message)}
 }
 
@@ -565,7 +635,7 @@ $("designPreview").style.color=c.text;
 $("designPreview").style.borderColor=c.border;
 $("previewButton").style.background=c.button;
 $("previewButton").style.color=c.text;
-$("previewApp").textContent=$("appName").value||"AdEarn";
+$("previewApp").textContent=$("appName").value||"Earning Bot";
 $("previewButton").textContent=$("label_ads")?.value||"নমুনা বাটন";
 }
 
@@ -588,6 +658,9 @@ theme:$("theme").value,
 app_name:$("appName").value.trim(),
 header_text:$("headerText").value.trim(),
 footer_text:$("footerText").value.trim(),
+logo_url:$("logoUrl").value.trim(),
+banner_url:$("bannerUrl").value.trim(),
+buttons:customButtons,
 colors:getColors(),
 labels,
 order,
@@ -598,7 +671,6 @@ const d=await api("/api/admin/design","POST",data);
 design=d.design||data;
 msg(d.message||"ডিজাইন সংরক্ষণ হয়েছে।");
 previewDesign();
-
 }catch(e){msg(e.message)}
 }
 
