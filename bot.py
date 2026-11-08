@@ -32,15 +32,14 @@ POSTBACK_SECRET = os.getenv("POSTBACK_SECRET", "")
 MONETAG_ZONE_ID = "12185380"
 
 TIMEZONE = ZoneInfo("Asia/Dhaka")
-
-DB_FILE = "bot.db" if os.path.exists("bot.db") else "adearn.db"
+DB_FILE = "adearn.db"
 
 app = Flask(__name__)
 db_lock = threading.RLock()
 
 
 # ==================================================
-# DATABASE SETUP & MIGRATION
+# DATABASE SETUP
 # ==================================================
 
 def db():
@@ -49,18 +48,6 @@ def db():
     conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
-
-
-def get_columns(cur, table):
-    return {row["name"] for row in cur.execute(f"PRAGMA table_info({table})")}
-
-
-def add_columns(cur, table, definitions):
-    existing = get_columns(cur, table)
-    for name, definition in definitions.items():
-        if name not in existing:
-            cur.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
-
 
 def init_db():
     with db_lock:
@@ -75,18 +62,10 @@ def init_db():
                 first_name TEXT DEFAULT '',
                 balance REAL DEFAULT 0,
                 referred_by INTEGER DEFAULT NULL,
-                joined_at TEXT DEFAULT ''
+                joined_at TEXT DEFAULT '',
+                is_blocked INTEGER DEFAULT 0
             )
         """)
-
-        add_columns(cur, "users", {
-            "username": "TEXT DEFAULT ''",
-            "first_name": "TEXT DEFAULT ''",
-            "balance": "REAL DEFAULT 0",
-            "referred_by": "INTEGER DEFAULT NULL",
-            "joined_at": "TEXT DEFAULT ''",
-            "is_blocked": "INTEGER DEFAULT 0"
-        })
 
         # Withdrawals Table
         cur.execute("""
@@ -97,22 +76,13 @@ def init_db():
                 method TEXT NOT NULL,
                 account TEXT NOT NULL,
                 status TEXT DEFAULT 'pending',
-                created_at TEXT DEFAULT ''
+                created_at TEXT DEFAULT '',
+                fee_amount REAL DEFAULT 0,
+                net_amount REAL DEFAULT 0,
+                fee_percent REAL DEFAULT 0,
+                refunded INTEGER DEFAULT 0
             )
         """)
-
-        add_columns(cur, "withdrawals", {
-            "user_id": "INTEGER",
-            "amount": "REAL DEFAULT 0",
-            "method": "TEXT DEFAULT ''",
-            "account": "TEXT DEFAULT ''",
-            "status": "TEXT DEFAULT 'pending'",
-            "created_at": "TEXT DEFAULT ''",
-            "fee_amount": "REAL DEFAULT 0",
-            "net_amount": "REAL DEFAULT 0",
-            "fee_percent": "REAL DEFAULT 0",
-            "refunded": "INTEGER DEFAULT 0"
-        })
 
         # Settings Table
         cur.execute("""
@@ -163,9 +133,6 @@ def init_db():
             )
         """)
 
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_ad_sessions_user ON ad_sessions(user_id,created_at)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON withdrawals(user_id,status)")
-
         conn.commit()
         conn.close()
 
@@ -178,19 +145,17 @@ def setting(key, default=""):
     finally:
         conn.close()
 
-
 def set_setting(key, value):
-    conn = db()
-    try:
-        conn.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (key, str(value)))
-        conn.commit()
-    finally:
-        conn.close()
-
+    with db_lock:
+        conn = db()
+        try:
+            conn.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (key, str(value)))
+            conn.commit()
+        finally:
+            conn.close()
 
 def today_text():
     return datetime.now(TIMEZONE).date().isoformat()
-
 
 def get_user(uid):
     conn = db()
@@ -199,29 +164,22 @@ def get_user(uid):
     finally:
         conn.close()
 
-
 def add_user(uid, username="", first_name="", referred_by=None):
-    conn = db()
-    try:
-        conn.execute("""
-            INSERT OR IGNORE INTO users(user_id,username,first_name,referred_by,joined_at)
-            VALUES(?,?,?,?,?)
-        """, (uid, username or "", first_name or "", referred_by, datetime.now(TIMEZONE).isoformat()))
-        
-        conn.execute("UPDATE users SET username=?, first_name=? WHERE user_id=?", (username or "", first_name or "", uid))
-        conn.commit()
-    finally:
-        conn.close()
-
+    with db_lock:
+        conn = db()
+        try:
+            conn.execute("""
+                INSERT OR IGNORE INTO users(user_id,username,first_name,referred_by,joined_at,is_blocked)
+                VALUES(?,?,?,?,?,0)
+            """, (uid, username or "", first_name or "", referred_by, datetime.now(TIMEZONE).isoformat()))
+            conn.execute("UPDATE users SET username=?, first_name=? WHERE user_id=?", (username or "", first_name or "", uid))
+            conn.commit()
+        finally:
+            conn.close()
 
 def is_blocked(uid):
     row = get_user(uid)
     return bool(row and row["is_blocked"])
-
-
-# ==================================================
-# TELEGRAM AUTH VERIFICATION
-# ==================================================
 
 def verify_telegram_data(init_data):
     if not BOT_TOKEN or not init_data:
@@ -242,7 +200,7 @@ def verify_telegram_data(init_data):
 
 
 # ==================================================
-# FLASK API CHANNELS
+# FLASK API ENDPOINTS
 # ==================================================
 
 @app.route("/api/app-config", methods=["GET"])
@@ -261,7 +219,6 @@ def get_app_config():
         "payment_methods": json.loads(setting("payment_methods", "[]")),
         "buttons": json.loads(setting("buttons_config", "[]"))
     })
-
 
 @app.route("/api/user-data", methods=["POST"])
 def user_data():
@@ -290,3 +247,37 @@ def user_data():
     conn = db()
     today = today_text()
     ads_watched = conn.execute(
+        "SELECT COUNT(*) as count FROM ad_sessions WHERE user_id=? AND substr(created_at,1,10)=? AND rewarded_at IS NOT NULL",
+        (uid, today)
+    ).fetchone()["count"]
+    
+    total_withdraw = conn.execute("SELECT SUM(amount) as total FROM withdrawals WHERE user_id=? AND status='paid'", (uid,)).fetchone()["total"] or 0
+    referrals_count = conn.execute("SELECT COUNT(*) as count FROM users WHERE referred_by=?", (uid,)).fetchone()["count"]
+    conn.close()
+
+    return jsonify({
+        "user_id": user_row["user_id"],
+        "first_name": user_row["first_name"],
+        "balance": user_row["balance"],
+        "ads_watched_today": ads_watched,
+        "total_withdraw": total_withdraw,
+        "referrals_count": referrals_count,
+        "referral_link": f"https://t.me{BOT_USERNAME}?start={uid}"
+    })
+
+@app.route("/api/withdraw", methods=["POST"])
+def request_withdraw():
+    data = request.json or {}
+    init_data = data.get("initData", "")
+    tg_user = verify_telegram_data(init_data)
+    
+    if not tg_user:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    uid = tg_user.get("id")
+    if is_blocked(uid):
+        return jsonify({"error": "Banned"}), 403
+
+    amount = float(data.get("amount", 0))
+    method = data.get("method", "")
+    account = data.get("account", "")
