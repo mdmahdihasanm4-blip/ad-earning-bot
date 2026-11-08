@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Earning Bot Admin</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org"></script>
     <style>
         :root {
             --bg: #0B061F;
@@ -70,12 +70,23 @@
 
         <div id="message"></div>
 
-        <!-- ৭ নং ফিচার: রিয়েল-টাইম ড্যাশবোর্ড কাউন্টার স্ট্যাটস -->
         <div class="grid">
-            <div class="stat"><small>মোট ইউজার</small><strong id="statTotalUsers">—</strong></div>
-            <div class="stat"><small>মোট ব্যালেন্স</small><strong id="statTotalBalance">—</strong></div>
-            <div class="stat"><small>পেন্ডিং উত্তোলন</small><strong id="statPendingWithdraws">—</strong></div>
-            <div class="stat"><small>সার্ভিস ফি চার্জ</small><strong id="statFeePct">—</strong></div>
+            <div class="stat">
+                <small>মোট ইউজার</small>
+                <strong id="statTotalUsers">—</strong>
+            </div>
+            <div class="stat">
+                <small>মোট ব্যালেন্স</small>
+                <strong id="statTotalBalance">—</strong>
+            </div>
+            <div class="stat">
+                <small>পেন্ডিং উত্তোলন</small>
+                <strong id="statPendingWithdraws">—</strong>
+            </div>
+            <div class="stat">
+                <small>সার্ভিস ফি চার্জ</small>
+                <strong id="statFeePct">—</strong>
+            </div>
         </div>
 
         <div class="tabbar">
@@ -85,7 +96,7 @@
             <button onclick="switchTab('design', this)">🎨 Dynamic Design</button>
         </div>
 
-        <!-- ৭ নং ফিচার: ইউজার ব্লক/আনব্লক ও ব্যালেন্স নিয়ন্ত্রণ -->
+        <!-- ইউজার ব্লক/আনব্লক ও ব্যালেন্স নিয়ন্ত্রণ -->
         <section id="pane-users" class="panel selected">
             <div class="card">
                 <h2>👥 সমস্ত নিবন্ধিত ইউজার তালিকা</h2>
@@ -94,7 +105,7 @@
             </div>
         </section>
 
-        <!-- ৬ নং ফিচার: উত্তোলনের ইতিহাস, Pending, Paid ও Rejected অবস্থা ম্যানেজমেন্ট -->
+        <!-- উত্তোলনের ইতিহাস ম্যানেজমেন্ট -->
         <section id="pane-withdrawals" class="panel">
             <div class="card">
                 <h2>💸 পেন্ডিং ক্যাশআউট রিকোয়েস্ট সমূহ</h2>
@@ -102,7 +113,7 @@
             </div>
         </section>
 
-        <!-- ৫ ও ৮ নং ফিচার: বিজ্ঞাপনের পুরস্কার, দৈনিক সীমা ও সার্ভিস চার্জ কনফিগারেশন -->
+        <!-- বিজ্ঞাপনের পুরস্কার, দৈনিক সীমা ও সার্ভিস চার্জ কনফিগারেশন -->
         <section id="pane-settings" class="panel">
             <div class="card">
                 <h2>⚙️ গ্লোবাল ইকোনমি সেটিংস</h2>
@@ -118,7 +129,6 @@
                 <label>উত্তোলনের শতকরা চার্জ ফি (%)</label>
                 <input type="number" id="cfgFeePercent" step="0.01" max="100">
 
-                <!-- ১১ নং ফিচার: পেমেন্ট পদ্ধতি লগোসহ চালু/বন্ধ কন্ট্রোলার -->
                 <h2 style="margin-top:16px;">💳 পেমেন্ট গেটওয়ে অ্যাক্টিভেশন</h2>
                 <div class="check-container">
                     <input type="checkbox" id="gateBkash">
@@ -133,18 +143,18 @@
             </div>
         </section>
 
-        <!-- ১, ৯ ও ১০ নং ফিচার: অ্যাপের নাম, লোগো, ডাইনামিক বাটন ম্যানেজার ও ব্যাকগ্রাউন্ড ইমেজ পরিবর্তন -->
+        <!-- অ্যাপের নাম, লোগো, ডাইনামিক বাটন ম্যানেজার ও ব্যাকগ্রাউন্ড ইমেজ পরিবর্তন -->
         <section id="pane-design" class="panel">
             <div class="card">
                 <h2>🎨 ডাইনামিক ব্র্যান্ডিং ও ভিজ্যুয়াল সেটিংস</h2>
                 <label>টেলিগ্রাম অ্যাপের নাম</label>
                 <input type="text" id="cfgAppName">
 
-                <label>অ্যাপ লোগো ইমেজ ইউআরএল (Logo URL)</label>
-                <input type="text" id="cfgAppLogo" placeholder="https://example.com/logo.png">
+                <label>% অ্যাপ লোগো ইমেজ ইউআরএল (Logo URL)</label>
+                <input type="text" id="cfgAppLogo" placeholder="https://example.com">
 
                 <label>অ্যাপ ব্যানার ইমেজ ইউআরএল (Banner URL)</label>
-                <input type="text" id="cfgAppBanner" placeholder="https://example.com/banner.png">
+                <input type="text" id="cfgAppBanner" placeholder="https://example.com">
 
                 <label>কাস্টম ব্যাকগ্রাউন্ড ইমেজ ইউআরএল (Background URL)</label>
                 <input type="text" id="cfgBgImage" placeholder="https://example.com">
@@ -160,7 +170,6 @@
                     </div>
                 </div>
 
-                <!-- ১০ নং ফিচার: নো-কোড ডাইনামিক বাটন পজিশন ও ম্যানেজমেন্ট ইন্টারফেস -->
                 <h2 style="margin-top:16px; margin-bottom:6px;">↕️ হোম পেজ বাটন সর্টার ও ম্যানেজার</h2>
                 <div id="adminButtonsListContainer"></div>
 
@@ -175,5 +184,8 @@
         let fullConfig = {};
         let cachedUsers = [];
 
-        // টেলিগ্রাম ইনিশিয়ালাইজেশন ও ব্যাকএন্ড অথেন্টিকেশন সেশন কানেক্ট
+        // 🚀 হোস্টিং ব্যাকএন্ড URL ফিক্সড সেটআপ
+        const BACKEND_URL = "https://fadehost.com"; 
+
         async function initAdmin() {
+            adminToken = prompt("দয়া করে আপনার সিকিউর অ্যাডমিন সিক্রেট টোকেনটি প্রবেশ করান:") || "";
