@@ -6,6 +6,8 @@ import secrets
 import hashlib
 import sqlite3
 import threading
+import time
+import asyncio
 
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
@@ -16,10 +18,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # ==================================================
-# CONFIGURATION (টোকেন সরাসরি কোডের ভেতরে ফিক্সড)
+# CONFIGURATION
 # ==================================================
 
-# ⚠️ নিচে খালি ডাবল কোটেশনের ("") ভেতরে আপনার BotFather থেকে পাওয়া আসল বটের টোকেনটি পেস্ট করে দিন
+# ⚠️ নিচের ডাবল কোটেশনের ("") ভেতরে আপনার বটের আসল API টোকেনটি পেস্ট করে দিন
 BOT_TOKEN = "8763011455:AAEl2cjFvK01b7kxUnbjp1atA4GY80OlZUg"
 
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
@@ -280,3 +282,4 @@ def request_withdraw():
     if is_blocked(uid):
         return jsonify({"error": "Banned"}), 403
 
+    amount = float(data.get("amount", 0))
