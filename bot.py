@@ -16,10 +16,12 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # ==================================================
-# CONFIGURATION
+# CONFIGURATION (টোকেন সরাসরি কোডের ভেতরে ফিক্সড)
 # ==================================================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN", "")
+# ⚠️ নিচে খালি ডাবল কোটেশনের ("") ভেতরে আপনার BotFather থেকে পাওয়া আসল বটের টোকেনটি পেস্ট করে দিন
+BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 
@@ -277,8 +279,4 @@ def request_withdraw():
     uid = tg_user.get("id")
     if is_blocked(uid):
         return jsonify({"error": "Banned"}), 403
-
-    amount = float(data.get("amount", 0))
-    method = data.get("method", "")
-    account = data.get("account", "")
 
