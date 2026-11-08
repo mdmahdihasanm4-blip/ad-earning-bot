@@ -20,7 +20,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 # ==================================================
 
 # ⚠️ নিচে খালি ডাবল কোটেশনের ("") ভেতরে আপনার BotFather থেকে পাওয়া আসল বটের টোকেনটি পেস্ট করে দিন
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+BOT_TOKEN = "8763011455:AAEl2cjFvK01b7kxUnbjp1atA4GY80OlZUg"
 
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
