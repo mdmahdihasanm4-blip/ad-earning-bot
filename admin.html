@@ -1,191 +1,221 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Earning Bot Admin</title>
-    <script src="https://telegram.org"></script>
-    <style>
-        :root {
-            --bg: #0B061F;
-            --card: #130D2B;
-            --text: #F3F4F6;
-            --muted: #9CA3AF;
-            --accent: #8B5CF6;
-            --border: #2D2254;
-            --green: #10B981;
-            --red: #EF4444;
-            --yellow: #FBBF24;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-        body { background: var(--bg); color: var(--text); padding: 16px 12px 60px; min-height: 100vh; }
-        .wrap { max-width: 850px; margin: auto; }
-        header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
-        h1 { font-size: 20px; font-weight: 800; }
-        h2 { font-size: 15px; margin-bottom: 12px; color: #FFF; font-weight: 700; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-        .stat { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-        .stat small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
-        .stat strong { display: block; font-size: 20px; font-weight: 800; color: #FFF; }
-        input, select, button { font-size: 14px; }
-        input[type=text], input[type=number], select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(0,0,0,0.3); color: #FFF; margin: 6px 0 14px; }
-        input[type=color] { width: 100%; height: 40px; padding: 4px; background: none; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; margin-top: 6px; }
-        label { font-size: 12px; color: var(--muted); font-weight: 600; }
-        button { border: 0; border-radius: 10px; padding: 12px 16px; background: var(--accent); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        .btnrow { display: flex; gap: 8px; margin-top: 10px; }
-        .secondary { background: #2E2254; border: 1px solid var(--border); }
-        .danger { background: var(--red); }
-        .success { background: var(--green); }
-        .smallbtn { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
-        #message { text-align: center; color: var(--yellow); font-size: 13px; font-weight: bold; margin-bottom: 12px; }
-        .row-item { border-top: 1px solid var(--border); padding: 14px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .row-item:first-child { border-top: 0; }
-        .badge { border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: bold; }
-        .blocked { background: rgba(239,68,68,0.1); color: var(--red); }
-        .active-user { background: rgba(16,185,129,0.1); color: var(--green); }
-        .tabbar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
-        .tabbar button { white-space: nowrap; background: #1B113B; color: var(--muted); border: 1px solid var(--border); border-radius: 20px; padding: 8px 16px; font-size: 13px; }
-        .tabbar button.selected { background: var(--accent); color: #FFF; border-color: var(--accent); }
-        .panel { display: none; }
-        .panel.selected { display: block; }
-        .colorgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
-        .check-container { display: flex; align-items: center; gap: 8px; margin: 8px 0 16px; font-size: 13px; }
-        .check-container input { width: 18px; height: 18px; cursor: pointer; }
-        .btn-controls { display: flex; gap: 6px; }
-        .btn-controls button { padding: 4px 8px; font-size: 11px; }
-        @media(min-width:600px){ .grid { grid-template-columns: repeat(4, 1fr); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#100b20">
+<title>Earning Bot Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+--bg:#100b20;--card:#1b1430;--text:#f8f4ff;
+--muted:#a99cbd;--accent:#a855f7;--border:#382653;
+--green:#20c997;--red:#ef476f;--yellow:#ffd166
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif;padding:16px 13px 40px}
+.wrap{max-width:850px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{font-size:21px;margin:0}
+h2{font-size:16px;margin:0 0 15px}
+h3{font-size:14px;margin:18px 0 10px}
+p{line-height:1.6}
+.muted{color:var(--muted);font-size:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:17px;padding:15px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.stat{background:#120d22;border:1px solid var(--border);border-radius:13px;padding:12px}
+.stat small{display:block;color:var(--muted);font-size:11px}
+.stat strong{display:block;font-size:21px;margin-top:5px}
+input,select,button{font:inherit}
+input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:#120d22;color:var(--text);margin:5px 0 12px}
+input[type=color]{height:44px;padding:4px}
+input[type=checkbox]{width:auto;margin:0}
+label{display:block;font-size:12px;color:#d9cbea;margin-top:9px}
+button{border:0;border-radius:10px;padding:11px 13px;background:var(--accent);color:white;font-weight:750;cursor:pointer}
+button:disabled{opacity:.4}
+.btnrow{display:flex;gap:7px;flex-wrap:wrap}
+.btnrow button{flex:1}
+.secondary{background:#382653}
+.danger{background:#a52b4b}
+.success{background:#137c60}
+.smallbtn{padding:7px 10px;font-size:11px}
+#message{white-space:pre-wrap;color:var(--yellow);font-size:12px;line-height:1.7;margin:8px 0}
+.row{border-top:1px solid var(--border);padding:12px 0}
+.userline{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.userline strong{font-size:13px;overflow-wrap:anywhere}
+.badge{display:inline-block;border-radius:20px;padding:4px 8px;font-size:10px;background:#ffffff15}
+.blocked{color:#ff8097;background:#632238}
+.active{color:#66e6b8;background:#164a3d}
+.search{display:grid;grid-template-columns:1fr 85px;gap:7px}
+.colorgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.check{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:12px}
+.sectionitem,.buttonitem{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--border);padding:9px;border-radius:10px;margin:6px 0;background:#120d22}
+.controls{display:flex;gap:4px;align-items:center}
+.controls button{padding:6px 9px}
+.preview{border:1px dashed #8062a3;border-radius:13px;padding:13px;margin-top:12px}
+.tabbar{display:flex;gap:6px;overflow:auto;margin:12px 0}
+.tabbar button{white-space:nowrap;background:#25183d}
+.tabbar button.selected{background:var(--accent)}
+.panel{display:none}
+.panel.selected{display:block}
+@media(min-width:600px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
 </head>
 <body>
-    <div class="wrap">
-        <header>
-            <div>
-                <h1>🛠 Admin Panel</h1>
-                <div class="muted" id="adminSecretStatus">Initializing Secure Session...</div>
-            </div>
-            <button class="smallbtn success" onclick="fetchAdminData()">↻ Refresh</button>
-        </header>
+<div class="wrap">
 
-        <div id="message"></div>
+<header>
+<div>
+<h1>🛠 Earning Bot</h1>
+<div class="muted">অ্যাডমিন কন্ট্রোল প্যানেল</div>
+</div>
+<button class="smallbtn" onclick="refreshAll()">↻ Refresh</button>
+</header>
 
-        <div class="grid">
-            <div class="stat">
-                <small>মোট ইউজার</small>
-                <strong id="statTotalUsers">—</strong>
-            </div>
-            <div class="stat">
-                <small>মোট ব্যালেন্স</small>
-                <strong id="statTotalBalance">—</strong>
-            </div>
-            <div class="stat">
-                <small>পেন্ডিং উত্তোলন</small>
-                <strong id="statPendingWithdraws">—</strong>
-            </div>
-            <div class="stat">
-                <small>সার্ভিস ফি চার্জ</small>
-                <strong id="statFeePct">—</strong>
-            </div>
-        </div>
+<div id="message">অ্যাডমিন প্যানেল লোড হচ্ছে...</div>
 
-        <div class="tabbar">
-            <button class="selected" onclick="switchTab('users', this)">👥 Users Control</button>
-            <button onclick="switchTab('withdrawals', this)">💸 Withdraw Requests</button>
-            <button onclick="switchTab('settings', this)">⚙️ App Settings</button>
-            <button onclick="switchTab('design', this)">🎨 Dynamic Design</button>
-        </div>
+<div class="grid" id="stats">
+<div class="stat"><small>মোট ইউজার</small><strong>—</strong></div>
+<div class="stat"><small>মোট ব্যালেন্স</small><strong>—</strong></div>
+<div class="stat"><small>পেন্ডিং উত্তোলন</small><strong>—</strong></div>
+<div class="stat"><small>আজকের বিজ্ঞাপন</small><strong>—</strong></div>
+</div>
 
-        <!-- ইউজার ব্লক/আনব্লক ও ব্যালেন্স নিয়ন্ত্রণ -->
-        <section id="pane-users" class="panel selected">
-            <div class="card">
-                <h2>👥 সমস্ত নিবন্ধিত ইউজার তালিকা</h2>
-                <input type="text" id="searchUserField" oninput="filterUsers()" placeholder="ইউজার আইডি বা নাম দিয়ে সার্চ করুন...">
-                <div id="usersContainer" class="muted">Loading user database...</div>
-            </div>
-        </section>
+<div class="tabbar">
+<button class="selected" onclick="showTab('dashboard',this)">🏠 Dashboard</button>
+<button onclick="showTab('users',this)">👥 Users</button>
+<button onclick="showTab('withdrawals',this)">💸 Withdraw</button>
+<button onclick="showTab('settings',this)">⚙️ Settings</button>
+<button onclick="showTab('design',this)">🎨 Design</button>
+</div>
 
-        <!-- উত্তোলনের ইতিহাস ম্যানেজমেন্ট -->
-        <section id="pane-withdrawals" class="panel">
-            <div class="card">
-                <h2>💸 পেন্ডিং ক্যাশআউট রিকোয়েস্ট সমূহ</h2>
-                <div id="withdrawContainer" class="muted">Loading withdrawal stream...</div>
-            </div>
-        </section>
+<section id="dashboard" class="panel selected">
+<div class="card">
+<h2>📊 সার্ভার ও অ্যাপের তথ্য</h2>
+<div id="dashboardInfo" class="muted">তথ্য লোড হচ্ছে...</div>
+</div>
+</section>
 
-        <!-- বিজ্ঞাপনের পুরস্কার, দৈনিক সীমা ও সার্ভিস চার্জ কনফিগারেশন -->
-        <section id="pane-settings" class="panel">
-            <div class="card">
-                <h2>⚙️ গ্লোবাল ইকোনমি সেটিংস</h2>
-                <label>প্রতি সফল বিজ্ঞাপনের পুরস্কার (৳)</label>
-                <input type="number" id="cfgReward" step="0.01">
+<section id="users" class="panel">
+<div class="card">
+<h2>👥 ইউজার ম্যানেজমেন্ট</h2>
+<div class="search">
+<input id="userSearch" placeholder="নাম, ইউজারনেম বা ID">
+<button onclick="loadUsers(true)">Search</button>
+</div>
+<div id="userCount" class="muted"></div>
+<div id="userList">ইউজার লোড হচ্ছে...</div>
+<div class="btnrow">
+<button class="secondary" onclick="changePage(-1)">আগের পেজ</button>
+<button class="secondary" onclick="changePage(1)">পরের পেজ</button>
+</div>
+</div>
+</section>
 
-                <label>দৈনিক সর্বোচ্চ বিজ্ঞাপনের সীমা (টি)</label>
-                <input type="number" id="cfgDailyLimit">
+<section id="withdrawals" class="panel">
+<div class="card">
+<h2>💸 পেন্ডিং উত্তোলন</h2>
+<div class="muted">Approve করলে Paid হবে। Reject করলে সম্পূর্ণ টাকা ফেরত যাবে।</div>
+<div id="withdrawList">লোড হচ্ছে...</div>
+<button class="secondary" style="width:100%" onclick="loadWithdrawals()">↻ রিফ্রেশ</button>
+</div>
+</section>
 
-                <label>সর্বনিম্ন ক্যাশআউট সীমা (৳)</label>
-                <input type="number" id="cfgMinWithdraw" step="0.01">
+<section id="settings" class="panel">
+<div class="card">
+<h2>⚙️ অ্যাপ সেটিংস</h2>
 
-                <label>উত্তোলনের শতকরা চার্জ ফি (%)</label>
-                <input type="number" id="cfgFeePercent" step="0.01" max="100">
+<label>প্রতি বিজ্ঞাপনের পুরস্কার (৳)</label>
+<input id="reward" type="number" min=".01" step=".01">
 
-                <h2 style="margin-top:16px;">💳 পেমেন্ট গেটওয়ে অ্যাক্টিভেশন</h2>
-                <div class="check-container">
-                    <input type="checkbox" id="gateBkash">
-                    <label for="gateBkash">বিকাশ (bKash) পেমেন্ট গেটওয়ে সচল রাখুন</label>
-                </div>
-                <div class="check-container">
-                    <input type="checkbox" id="gateNagad">
-                    <label for="gateNagad">নগদ (Nagad) পেমেন্ট গেটওয়ে সচল রাখুন</label>
-                </div>
+<label>প্রতিদিন বিজ্ঞাপনের সীমা</label>
+<input id="dailyLimit" type="number" min="1">
 
-                <button style="width:100%;" onclick="saveGlobalSettings()">সংরক্ষণ করুন</button>
-            </div>
-        </section>
+<label>সর্বনিম্ন উত্তোলন (৳)</label>
+<input id="minWithdraw" type="number" min="1" step=".01">
 
-        <!-- অ্যাপের নাম, লোগো, ডাইনামিক বাটন ম্যানেজার ও ব্যাকগ্রাউন্ড ইমেজ পরিবর্তন -->
-        <section id="pane-design" class="panel">
-            <div class="card">
-                <h2>🎨 ডাইনামিক ব্র্যান্ডিং ও ভিজ্যুয়াল সেটিংস</h2>
-                <label>টেলিগ্রাম অ্যাপের নাম</label>
-                <input type="text" id="cfgAppName">
+<label>উত্তোলনের সার্ভিস ফি (%)</label>
+<input id="feePercent" type="number" min="0" max="50" step=".01">
+<div class="muted">০ থেকে ৫০ শতাংশের মধ্যে দিতে পারবে।</div>
 
-                <label>% অ্যাপ লোগো ইমেজ ইউআরএল (Logo URL)</label>
-                <input type="text" id="cfgAppLogo" placeholder="https://example.com">
+<h3>💳 পেমেন্ট মাধ্যম</h3>
+<label class="check">
+<input type="checkbox" id="bkashEnabled">
+বিকাশ চালু রাখুন
+</label>
+<label class="check">
+<input type="checkbox" id="nagadEnabled">
+নগদ চালু রাখুন
+</label>
 
-                <label>অ্যাপ ব্যানার ইমেজ ইউআরএল (Banner URL)</label>
-                <input type="text" id="cfgAppBanner" placeholder="https://example.com">
+<button style="width:100%" onclick="saveSettings()">সেটিংস সংরক্ষণ করুন</button>
+</div>
+</section>
 
-                <label>কাস্টম ব্যাকগ্রাউন্ড ইমেজ ইউআরএল (Background URL)</label>
-                <input type="text" id="cfgBgImage" placeholder="https://example.com">
+<section id="design" class="panel">
+<div class="card">
+<h2>🎨 অ্যাপ ডিজাইন ম্যানেজার</h2>
 
-                <div class="colorgrid">
-                    <div>
-                        <label>থিম প্রাইমারি কালার</label>
-                        <input type="color" id="cfgColorPrimary">
-                    </div>
-                    <div>
-                        <label>থিম ব্যাকগ্রাউন্ড কালার</label>
-                        <input type="color" id="cfgColorBg">
-                    </div>
-                </div>
+<label>অ্যাপের নাম</label>
+<input id="appName" maxlength="60">
 
-                <h2 style="margin-top:16px; margin-bottom:6px;">↕️ হোম পেজ বাটন সর্টার ও ম্যানেজার</h2>
-                <div id="adminButtonsListContainer"></div>
+<label>হেডারের লেখা</label>
+<input id="headerText" maxlength="120">
 
-                <button style="width:100%; margin-top:16px;" onclick="saveDesignSettings()">ডিজাইন লেআউট সংরক্ষণ করুন</button>
-            </div>
-        </section>
-    </div>
+<label>ফুটারের লেখা</label>
+<input id="footerText" maxlength="160">
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        let adminToken = ""; 
-        let fullConfig = {};
-        let cachedUsers = [];
+<label>লোগোর Image URL</label>
+<input id="logoUrl" placeholder="https://example.com/logo.png">
 
-        // 🚀 হোস্টিং ব্যাকএন্ড URL ফিক্সড সেটআপ
-        const BACKEND_URL = "https://fadehost.com"; 
+<label>ব্যানারের Image URL</label>
+<input id="bannerUrl" placeholder="https://example.com/banner.png">
 
-        async function initAdmin() {
-            adminToken = prompt("দয়া করে আপনার সিকিউর অ্যাডমিন সিক্রেট টোকেনটি প্রবেশ করান:") || "";
+<label>থিম</label>
+<select id="theme">
+<option value="dark">Dark</option>
+<option value="light">Light</option>
+<option value="green">Green</option>
+<option value="blue">Blue</option>
+<option value="red">Red</option>
+<option value="custom">Custom</option>
+</select>
+
+<h3>🌈 কালার পরিবর্তন</h3>
+<div class="colorgrid">
+<div><label>ব্যাকগ্রাউন্ড</label><input type="color" id="colorBackground"></div>
+<div><label>কার্ড</label><input type="color" id="colorCard"></div>
+<div><label>বাটন</label><input type="color" id="colorButton"></div>
+<div><label>লেখা</label><input type="color" id="colorText"></div>
+<div><label>বর্ডার</label><input type="color" id="colorBorder"></div>
+<div><label>মিউটেড লেখা</label><input type="color" id="colorMuted"></div>
+<div><label>অ্যাকসেন্ট</label><input type="color" id="colorAccent"></div>
+</div>
+
+<h3>✍️ বাটন ও সেকশনের নাম</h3>
+<div id="labelFields"></div>
+
+<h3>➕ কাস্টম বাটন যোগ করুন</h3>
+<label>বাটনের নাম</label>
+<input id="newButtonName" maxlength="40" placeholder="যেমন: আমাদের গ্রুপ">
+
+<label>বাটনের আইকন</label>
+<input id="newButtonIcon" maxlength="8" placeholder="🔗">
+
+<label>বাটনের লিংক</label>
+<input id="newButtonUrl" placeholder="https://example.com">
+
+<label>বাটনের কাজ</label>
+<select id="newButtonAction">
+<option value="link">লিংক খুলবে</option>
+<option value="ads">বিজ্ঞাপন</option>
+<option value="wallet">ব্যালেন্স</option>
+<option value="history">উত্তোলনের ইতিহাস</option>
+<option value="referral">রেফারেল</option>
+</select>
+
+<button style="width:100%" onclick="addButton()">বাটন যোগ করুন</button>
+<div id="buttonList"></div>
+
+<h3>↕️ সেকশনের অবস্থান ও দেখানো/লুকানো</h3>
+<p class="muted">উপর-নিচের বাটন দিয়ে অবস্থান বদলাও।
