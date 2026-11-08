@@ -61,7 +61,6 @@ def get_columns(cur, table):
 
 def add_columns(cur, table, definitions):
  existing = get_columns(cur, table)
-
  for name, definition in definitions.items():
  if name not in existing:
  cur.execute(
