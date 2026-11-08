@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <title>Earning Bot</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://libtl.com/sdk.js" data-zone="12185380" data-sdk="show_12185380"></script>
+    <script src="https://telegram.org"></script>
+    <script src="https://libtl.com" data-zone="12185380" data-sdk="show_12185380"></script>
     <style>
         :root {
             --accent: #8B5CF6;
@@ -59,7 +59,7 @@
         .pending { background: rgba(251,191,36,0.1); color: var(--yellow); }
         .paid { background: rgba(16,185,129,0.1); color: var(--green); }
         .rejected { background: rgba(239,68,68,0.1); color: var(--red); }
-        .history-item { padding: 12px 0; border-top: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .history-item { padding: 12px 0; border-top: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .history-item:first-child { border-top: 0; }
         .method-logo { height: 20px; vertical-align: middle; margin-right: 6px; }
         .nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(19, 13, 43, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); z-index: 100; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); }
@@ -101,7 +101,6 @@
                     </div>
                 </div>
 
-                <!-- Admin Configured Dynamic Layout Buttons Platform -->
                 <div id="dynamicButtonsContainer" class="dynamic-grid"></div>
 
                 <div class="card">
@@ -128,7 +127,7 @@
                 </div>
             </section>
 
-            <!-- WALLET SEC -->
+            <!-- WALLET SECTION -->
             <section id="sec-wallet" class="section">
                 <div class="card hero">
                     <div class="sub" id="txtAvailableBal">Available Wallet Balance</div>
@@ -145,4 +144,3 @@
                     
                     <label id="lblAmount">Withdrawal Amount</label>
                     <input type="number" id="withdrawAmount" oninput="calculateFees()" placeholder="Amount">
-                    
