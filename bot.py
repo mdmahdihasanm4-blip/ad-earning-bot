@@ -6,7 +6,6 @@ import secrets
 import hashlib
 import sqlite3
 import threading
-import time
 import asyncio
 
 from datetime import datetime, timezone, timedelta
@@ -21,9 +20,8 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 # CONFIGURATION
 # ==================================================
 
-# ⚠️ নিচের ডাবল কোটেশনের ("") ভেতরে আপনার বটের আসল API টোকেনটি পেস্ট করে দিন
-BOT_TOKEN = "8763011455:AAEl2cjFvK01b7kxUnbjp1atA4GY80OlZUg"
-
+# হোস্টিংয়ের সিস্টেম ভ্যারিয়েবল থেকে টোকেন পড়ার ক্লাউড-সেফ মেকানিজম
+BOT_TOKEN = os.getenv("8763011455:AAEl2cjFvK01b7kxUnbjp1atA4GY80OlZUg") or os.getenv("BOT_TOKEN", "")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 
@@ -282,4 +280,3 @@ def request_withdraw():
     if is_blocked(uid):
         return jsonify({"error": "Banned"}), 403
 
-    amount = float(data.get("amount", 0))
